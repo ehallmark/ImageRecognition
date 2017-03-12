@@ -30,8 +30,7 @@ public class ImageVectorizer {
                 int  red   = color.getRed();
                 int  green = color.getGreen();
                 int  blue  =  color.getBlue();
-                int alpha = color.getAlpha();
-                for(int c : new int[]{red,green,blue,alpha}) {
+                for(int c : new int[]{red,green,blue}) {
                     vec.putScalar(idx.getAndIncrement(),new Double(c)/255);
                     if(idx.get()>=numInputs) return vec;
                 }

@@ -4,17 +4,16 @@ import com.sun.javafx.binding.StringFormatter;
 import org.apache.commons.codec.StringEncoder;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
+import org.datavec.image.recordreader.ImageRecordReader;
 import org.deeplearning4j.berkeley.Pair;
 import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
+import org.deeplearning4j.nn.conf.LearningRatePolicy;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.Updater;
 import org.deeplearning4j.nn.conf.inputs.InputType;
-import org.deeplearning4j.nn.conf.layers.ConvolutionLayer;
-import org.deeplearning4j.nn.conf.layers.DenseLayer;
-import org.deeplearning4j.nn.conf.layers.OutputLayer;
-import org.deeplearning4j.nn.conf.layers.SubsamplingLayer;
+import org.deeplearning4j.nn.conf.layers.*;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
@@ -26,6 +25,7 @@ import org.nd4j.linalg.dataset.api.DataSetPreProcessor;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
+import org.nd4j.linalg.ops.transforms.Transforms;
 
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
@@ -43,33 +43,32 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ImageIterator implements DataSetIterator{
     public static final File urlFile = new File("fall11_urls.txt");
-    private volatile Iterator<Pair<Integer,URL>> urlIterator;
-    private List<Pair<Integer,URL>> urlList;
+    private volatile Iterator<Pair<Integer,INDArray>> urlIterator;
+    private List<Pair<Integer,INDArray>> urlList;
     private int totalInputs;
     private int batch;
 
-    public ImageIterator(int batch,int numInputs, int limit, boolean train) {
+    public ImageIterator(int batch,int numInputs, int limit) {
         this.batch=batch;
         this.totalInputs=numInputs;
         urlList=new ArrayList<>();
         AtomicInteger idCounter = new AtomicInteger(0);
         LineSentenceIterator iter = new LineSentenceIterator(urlFile);
-        Random rand = new Random(69);
         while(iter.hasNext()&&idCounter.get()<limit) {
-            if(rand.nextBoolean()) {
-                if(train)continue;
-            } else {
-                if(!train)continue;
-            }
             String line = iter.nextSentence();
             if(line==null) continue;
+            if(!line.contains("flickr")||!line.endsWith(".jpg"))continue;
             int idx = line.indexOf("http:");
             if(idx>=0) {
                 String urlString = line.substring(idx);
+                urlString=urlString.substring(0,urlString.length()-4)+"_s.jpg"; // gets small images
                 System.out.println(urlString);
                 try {
                     URL url = new URL(urlString);
-                    urlList.add(new Pair<>(idCounter.getAndIncrement(), url));
+                    BufferedImage image = ImageStreamer.loadImage(url);
+                    if(image==null)continue;
+                    INDArray f = ImageVectorizer.vectorizeImage(image,totalInputs);
+                    urlList.add(new Pair<>(idCounter.getAndIncrement(), f));
                     System.out.println(idCounter.get());
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -82,20 +81,14 @@ public class ImageIterator implements DataSetIterator{
 
     @Override
     public DataSet next(int num) { // only does one at a time no matter what for now
-        BufferedImage image;
         int cnt = 0;
         INDArray features = Nd4j.create(num,totalInputs);
-        INDArray labels = Nd4j.zeros(num,totalOutcomes());
         while(urlIterator.hasNext()&&cnt<num) {
-            Pair<Integer,URL> pair = urlIterator.next();
-            image = ImageStreamer.loadImage(pair.getSecond());
-            if(image==null)continue;
-            INDArray f = ImageVectorizer.vectorizeImage(image,totalInputs);
-            labels.putScalar(cnt,pair.getFirst(),1.0);
-            features.putRow(cnt,f);
+            Pair<Integer,INDArray> pair = urlIterator.next();
+            features.putRow(cnt,pair.getSecond());
             cnt++;
         }
-        return new DataSet(features,labels);
+        return new DataSet(features,features);
     }
 
     @Override
@@ -110,7 +103,7 @@ public class ImageIterator implements DataSetIterator{
 
     @Override
     public int totalOutcomes() {
-        return urlList.size();
+        return totalInputs;
     }
 
     @Override
@@ -170,33 +163,31 @@ public class ImageIterator implements DataSetIterator{
 
 
     public static void main(String[] args) throws Exception {
-        int batch = 5;
-        int limit = 100;
-        int numInputs = 100;
-        int nEpochs = 20;
+        int batch = 10;
+        int limit = 1000;
+        int rows = 40;
+        int cols = 40;
+        int channels = 3;
+        int numInputs = rows*cols*channels;
+        int nEpochs = 2000;
         // 1,4 billion!
-        ImageIterator iterator = new ImageIterator(batch,numInputs,limit,true);
-        ImageIterator testIterator = new ImageIterator(batch,numInputs,limit,false);
-                /*
-            Construct the neural network
-         */
+        ImageIterator iterator = new ImageIterator(batch,numInputs,limit);
+
         System.out.println("Build model....");
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
                 .seed(69)
                 .iterations(3) // Training iterations as above
+                .miniBatch(true)
                 .regularization(true).l2(0.0005)
-                /*
-                    Uncomment the following for learning decay and bias
-                 */
-                .learningRate(.01)//.biasLearningRate(0.02)
-                //.learningRateDecayPolicy(LearningRatePolicy.Inverse).lrPolicyDecayRate(0.001).lrPolicyPower(0.75)
+                .learningRate(.01).biasLearningRate(0.02)
+                .learningRateDecayPolicy(LearningRatePolicy.Inverse).lrPolicyDecayRate(0.001).lrPolicyPower(0.75)
                 .weightInit(WeightInit.XAVIER)
-                .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
+                .optimizationAlgo(OptimizationAlgorithm.LINE_GRADIENT_DESCENT)
                 .updater(Updater.NESTEROVS).momentum(0.9)
                 .list()
                 .layer(0, new ConvolutionLayer.Builder(5, 5)
                         //nIn and nOut specify depth. nIn here is the nChannels and nOut is the number of filters to be applied
-                        .nIn(numInputs)
+                        .nIn(channels)
                         .stride(1, 1)
                         .nOut(20)
                         .activation(Activation.IDENTITY)
@@ -217,25 +208,12 @@ public class ImageIterator implements DataSetIterator{
                         .build())
                 .layer(4, new DenseLayer.Builder().activation(Activation.RELU)
                         .nOut(500).build())
-                .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
-                        .nOut(limit)
-                        .activation(Activation.SOFTMAX)
+                .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MSE)
+                        .nOut(numInputs)
+                        .activation(Activation.SIGMOID)
                         .build())
-                .setInputType(InputType.convolutionalFlat(28,28,1)) //See note below
+                .setInputType(InputType.convolutionalFlat(rows,cols,channels)) //See note below
                 .backprop(true).pretrain(false).build();
-
-        /*
-        Regarding the .setInputType(InputType.convolutionalFlat(28,28,1)) line: This does a few things.
-        (a) It adds preprocessors, which handle things like the transition between the convolutional/subsampling layers
-            and the dense layer
-        (b) Does some additional configuration validation
-        (c) Where necessary, sets the nIn (number of input neurons, or input depth in the case of CNNs) values for each
-            layer based on the size of the previous layer (but it won't override values manually set by the user)
-        InputTypes can be used with other layer types too (RNNs, MLPs etc) not just CNNs.
-        For normal images (when using ImageRecordReader) use InputType.convolutional(height,width,depth).
-        MNIST record reader is a special case, that outputs 28x28 pixel grayscale (nChannels=1) images, in a "flattened"
-        row vector format (i.e., 1x784 vectors), hence the "convolutionalFlat" input type used here.
-        */
 
         MultiLayerNetwork model = new MultiLayerNetwork(conf);
         model.init();
@@ -244,19 +222,23 @@ public class ImageIterator implements DataSetIterator{
         System.out.println("Train model....");
         model.setListeners(new ScoreIterationListener(1));
         for( int i=0; i<nEpochs; i++ ) {
-            model.fit(iterator);
+            while(iterator.hasNext())model.fit(iterator.next());
+            iterator.reset();
             System.out.println("*** Completed epoch {"+i+"} ***");
 
             System.out.println("Evaluate model....");
-            Evaluation eval = new Evaluation(limit);
-            while(testIterator.hasNext()){
-                DataSet ds = testIterator.next();
+            double error = 0;
+            while(iterator.hasNext()){
+                DataSet ds = iterator.next();
                 INDArray output = model.output(ds.getFeatureMatrix(), false);
-                eval.eval(ds.getLabels(), output);
-
+                for(int r = 0; r < output.rows(); r++) {
+                    double sim = Transforms.cosineSim(output.getRow(r),ds.getFeatureMatrix().getRow(r));
+                    if(new Double(sim).isNaN()) error+=2.0;
+                    else error+= 1.0-sim;
+                }
             }
-            System.out.println(eval.stats());
-            testIterator.reset();
+            System.out.println("Error: "+error);
+            iterator.reset();
         }
         System.out.println("****************Example finished********************");
 
