@@ -24,8 +24,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class FlickrScraper {
     private static final int timeout = 10000;
-    public static Collection<String> getImageUrlsFromSearchText(String searchText) {
-        Set<String> urls = new HashSet<>();
+    private static final AtomicInteger totalUrlCounter = new AtomicInteger(0);
+    public static void writeImageUrlsFromSearchText(String searchText, Set<Integer> alreadyContains, BufferedWriter writer) {
         Document doc;
             boolean shouldContinue = true;
             int page = 1;
@@ -51,13 +51,19 @@ public class FlickrScraper {
                                     if (!url.startsWith("http")) url = "http:" + url;
                                     if (!url.endsWith("_s.jpg") && url.length() > 10)
                                         url = url.substring(0, url.length() - 6) + "_s.jpg";
-                                    shouldContinue = true;
-                                    urls.add(url);
+                                    if(!alreadyContains.contains(url.hashCode())) {
+                                        writer.write(url+"\n");
+                                        writer.flush();
+                                        System.out.println("URLs ingested so far: "+totalUrlCounter.getAndIncrement());
+                                        shouldContinue = true;
+                                        alreadyContains.add(url.hashCode());
+                                    }
                                 }
                             }
                         }
                     }
                     page++;
+                    System.out.println("Page: "+page);
                 } catch(Exception e) {
                     System.out.println("Error");
                     if(e instanceof SocketTimeoutException) {
@@ -65,7 +71,6 @@ public class FlickrScraper {
                     }
                 }
             }
-        return urls;
     }
 
     public static void main(String[] args) throws Exception{
@@ -100,21 +105,7 @@ public class FlickrScraper {
             pool.execute(new RecursiveAction() {
                 @Override
                 protected void compute() {
-                    getImageUrlsFromSearchText(line).forEach(url-> {
-                        try {
-                            Integer hash = url.hashCode();
-                            if (!alreadyContains.contains(hash)) {
-                                //if (ImageStreamer.loadImage(new URL(url)) != null) {
-                                writer.write(url+"\n");
-                                writer.flush();
-                                //} too slow i think
-                                alreadyContains.add(hash);
-                            }
-                        } catch(Exception e) {
-                            e.printStackTrace();
-                        }
-
-                    });
+                    writeImageUrlsFromSearchText(line,alreadyContains,writer);
                     System.out.println(cnt.getAndIncrement());
                 }
             });
