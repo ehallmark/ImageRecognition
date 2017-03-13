@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Created by Evan on 3/12/2017.
  */
 public class FlickrScraper {
-    private static final int timeout = 10000;
+    private static final int timeout = 3000;
     private static final AtomicInteger totalUrlCounter = new AtomicInteger(0);
     public static void writeImageUrlsFromSearchText(String searchText, Set<Integer> alreadyContains, BufferedWriter writer) {
         Document doc;
@@ -85,34 +85,36 @@ public class FlickrScraper {
                 existingUrls.add(line);
             });
         }
-        System.out.println("Total URLs so far: "+existingUrls.size());
+        System.out.println("Total URLs so far: "+totalUrlCounter.addAndGet(existingUrls.size()));
         BufferedWriter writer = new BufferedWriter(new FileWriter(flickrFile));
         BufferedReader reader = new BufferedReader(new FileReader(new File("search_words.txt")));
-        System.out.println("Starting to clean URLs");
-        Set<Integer> alreadyContains = new HashSet<>();
-        existingUrls.forEach(url->{
-            alreadyContains.add(url.hashCode());
-            try {
-                writer.write(url + "\n");
-            } catch(Exception e) {
-                e.printStackTrace();
-            }
-        });
-        System.out.println("Finished cleaning URLs");
-        ForkJoinPool pool = new ForkJoinPool();
-        AtomicInteger cnt = new AtomicInteger(0);
-        reader.lines().forEach(line->{
-            pool.execute(new RecursiveAction() {
-                @Override
-                protected void compute() {
-                    writeImageUrlsFromSearchText(line,alreadyContains,writer);
-                    System.out.println(cnt.getAndIncrement());
+        try {
+            System.out.println("Starting to clean URLs");
+            Set<Integer> alreadyContains = new HashSet<>();
+            existingUrls.forEach(url -> {
+                alreadyContains.add(url.hashCode());
+                try {
+                    writer.write(url + "\n");
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             });
-        });
-        pool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
-        writer.flush();
-        writer.close();
-
+            System.out.println("Finished cleaning URLs");
+            ForkJoinPool pool = new ForkJoinPool(Runtime.getRuntime().availableProcessors()*4);
+            AtomicInteger cnt = new AtomicInteger(0);
+            reader.lines().forEach(line -> {
+                pool.execute(new RecursiveAction() {
+                    @Override
+                    protected void compute() {
+                        writeImageUrlsFromSearchText(line, alreadyContains, writer);
+                        System.out.println(cnt.getAndIncrement());
+                    }
+                });
+            });
+            pool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+        } finally {
+            writer.close();
+            reader.close();
+        }
     }
 }
