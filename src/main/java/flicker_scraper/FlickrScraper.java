@@ -106,7 +106,7 @@ public class FlickrScraper {
                 pool.execute(new RecursiveAction() {
                     @Override
                     protected void compute() {
-                        writeImageUrlsFromSearchText(line, alreadyContains, writer);
+                        writeImageUrlsFromSearchText(line.split(",")[0], alreadyContains, writer);
                         System.out.println(cnt.getAndIncrement());
                     }
                 });
