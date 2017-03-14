@@ -33,9 +33,9 @@ public class FlickrScraper {
             int numRetriesOnCurrentPage = 0;
             while(shouldContinue) {
                 shouldContinue=false;
-
+                String searchURL = "https://www.flickr.com/search/?text=" + searchText + "&page=" + page;
                 try {
-                    doc = Jsoup.connect("https://www.flickr.com/search/?text=" + searchText + "&page=" + page).timeout(timeout).get();
+                    doc = Jsoup.connect(searchURL).timeout(timeout).get();
 
                     // get all links
                     //Elements divs = doc.select("div[background-image]");
@@ -70,6 +70,7 @@ public class FlickrScraper {
                     System.out.println("URLs ingested so far: "+totalUrlCounter.getAndIncrement());
                 } catch(Exception e) {
                     System.out.println("Error: "+e.getMessage());
+                    System.out.println(searchURL);
                     numRetriesOnCurrentPage++;
                     if(e instanceof SocketTimeoutException) {
                         if(numRetriesOnCurrentPage<maxRetriesPerPage) {
