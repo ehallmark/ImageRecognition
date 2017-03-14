@@ -24,11 +24,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class FlickrScraper {
     private static final int timeout = 10000;
+    private static final int maxRetriesPerPage = 5;
     private static final AtomicInteger totalUrlCounter = new AtomicInteger(0);
     public static void writeImageUrlsFromSearchText(String searchText, Set<Integer> alreadyContains, BufferedWriter writer) {
         Document doc;
             boolean shouldContinue = true;
             int page = 1;
+            int numRetriesOnCurrentPage = 0;
             while(shouldContinue) {
                 shouldContinue=false;
 
@@ -54,7 +56,6 @@ public class FlickrScraper {
                                     if(!alreadyContains.contains(url.hashCode())) {
                                         writer.write(url+"\n");
                                         writer.flush();
-                                        System.out.println("URLs ingested so far: "+totalUrlCounter.getAndIncrement());
                                         shouldContinue = true;
                                         alreadyContains.add(url.hashCode());
                                     }
@@ -63,11 +64,20 @@ public class FlickrScraper {
                         }
                     }
                     page++;
+                    numRetriesOnCurrentPage=0;
+                    System.out.println("Search: "+searchText);
                     System.out.println("Page: "+page);
+                    System.out.println("URLs ingested so far: "+totalUrlCounter.getAndIncrement());
                 } catch(Exception e) {
                     System.out.println("Error");
                     if(e instanceof SocketTimeoutException) {
                         shouldContinue=true;
+                        if(numRetriesOnCurrentPage>=maxRetriesPerPage) {
+                            page++;
+                            numRetriesOnCurrentPage=0;
+                        } else {
+                            numRetriesOnCurrentPage++;
+                        }
                     }
                 }
             }
