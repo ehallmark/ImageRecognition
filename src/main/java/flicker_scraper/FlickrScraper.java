@@ -69,14 +69,11 @@ public class FlickrScraper {
                     System.out.println("Page: "+page);
                     System.out.println("URLs ingested so far: "+totalUrlCounter.getAndIncrement());
                 } catch(Exception e) {
-                    System.out.println("Error");
+                    System.out.println("Error: "+e.getMessage());
+                    numRetriesOnCurrentPage++;
                     if(e instanceof SocketTimeoutException) {
-                        shouldContinue=true;
-                        if(numRetriesOnCurrentPage>=maxRetriesPerPage) {
-                            page++;
-                            numRetriesOnCurrentPage=0;
-                        } else {
-                            numRetriesOnCurrentPage++;
+                        if(numRetriesOnCurrentPage<maxRetriesPerPage) {
+                            shouldContinue=true;
                         }
                     }
                 }
