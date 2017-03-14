@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Created by Evan on 3/12/2017.
  */
 public class FlickrScraper {
-    private static final int timeout = 1000;
+    private static final int timeout = 10000;
     private static final AtomicInteger totalUrlCounter = new AtomicInteger(0);
     public static void writeImageUrlsFromSearchText(String searchText, Set<Integer> alreadyContains, BufferedWriter writer) {
         Document doc;
@@ -100,7 +100,7 @@ public class FlickrScraper {
                 }
             });
             System.out.println("Finished cleaning URLs");
-            ForkJoinPool pool = new ForkJoinPool(Runtime.getRuntime().availableProcessors()*2);
+            ForkJoinPool pool = new ForkJoinPool(Runtime.getRuntime().availableProcessors()*4);
             AtomicInteger cnt = new AtomicInteger(0);
             reader.lines().forEach(line -> {
                 pool.execute(new RecursiveAction() {
