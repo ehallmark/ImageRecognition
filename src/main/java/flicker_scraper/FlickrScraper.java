@@ -110,7 +110,7 @@ public class FlickrScraper {
                 }
             });
             System.out.println("Finished cleaning URLs");
-            ForkJoinPool pool = new ForkJoinPool(Runtime.getRuntime().availableProcessors()*20);
+            ForkJoinPool pool = new ForkJoinPool(Runtime.getRuntime().availableProcessors()*8);
             AtomicInteger cnt = new AtomicInteger(0);
             reader.lines().forEach(line -> {
                 pool.execute(new RecursiveAction() {
