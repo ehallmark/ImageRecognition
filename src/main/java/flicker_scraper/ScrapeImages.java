@@ -22,6 +22,7 @@ public class ScrapeImages {
     public static void main(String[] args) throws Exception{
         BufferedReader reader = new BufferedReader(new FileReader(MergeUrlFiles.mergedFile));
         Stream<String> lines = reader.lines();
+        System.out.println("Args: "+String.join("; ",args));
         if(args.length>2) {
             int offset = Integer.valueOf(args[1]);
             System.out.println("Offset specified: "+offset);
