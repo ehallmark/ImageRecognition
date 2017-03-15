@@ -13,19 +13,23 @@ import java.net.URL;
  * Created by Evan on 3/15/2017.
  */
 public class ScrapeImages {
-    public static final String IMAGE_DIR = "flickr_images/";
+    public static final String IMAGE_DIR = "/mnt/bucket/images/";
     public static void main(String[] args) throws Exception{
         BufferedReader reader = new BufferedReader(new FileReader(MergeUrlFiles.mergedFile));
         reader.lines().forEach(line->{
-            try {
-                BufferedImage image = ImageStreamer.loadImage(new URL(line));
-                if(image!=null) {
-                    File file = new File(IMAGE_DIR+line.hashCode()+".jpg");
-                    ImageIO.write(image,"jpg",file);
-                }
-            } catch(Exception e) {
-                e.printStackTrace();
-            }
+            trySaveImageToGoogleCloud(line);
         });
+    }
+
+    public static void trySaveImageToGoogleCloud(String urlString) {
+        try {
+            BufferedImage image = ImageStreamer.loadImage(new URL(urlString));
+            if(image!=null) {
+                File file = new File(IMAGE_DIR+urlString.hashCode()+".jpg");
+                ImageIO.write(image,"jpg",file);
+            }
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -26,7 +26,7 @@ public class FlickrScraper {
     private static final int timeout = 10000;
     private static final int maxRetriesPerPage = 5;
     private static final AtomicInteger totalUrlCounter = new AtomicInteger(0);
-    public static void writeImageUrlsFromSearchText(String searchText, Set<Integer> alreadyContains, BufferedWriter writer) {
+    public static void writeImageUrlsFromSearchText(String searchText, Set<Integer> alreadyContains) {
         Document doc;
             boolean shouldContinue = true;
             int page = 1;
@@ -54,8 +54,7 @@ public class FlickrScraper {
                                     if (!url.endsWith("_s.jpg") && url.length() > 10)
                                         url = url.substring(0, url.length() - 6) + "_s.jpg";
                                     if(!alreadyContains.contains(url.hashCode())) {
-                                        writer.write(url+"\n");
-                                        writer.flush();
+                                        ScrapeImages.trySaveImageToGoogleCloud(url);
                                         shouldContinue = true;
                                         alreadyContains.add(url.hashCode());
                                     }
@@ -67,7 +66,7 @@ public class FlickrScraper {
                     numRetriesOnCurrentPage=0;
                     System.out.println("Search: "+searchText);
                     System.out.println("Page: "+page);
-                    System.out.println("URLs ingested so far: "+totalUrlCounter.getAndIncrement());
+                    System.out.println("Images ingested so far: "+totalUrlCounter.getAndIncrement());
                 } catch(Exception e) {
                     System.out.println("Error: "+e.getMessage());
                     System.out.println(searchURL);
@@ -114,7 +113,7 @@ public class FlickrScraper {
                 pool.execute(new RecursiveAction() {
                     @Override
                     protected void compute() {
-                        writeImageUrlsFromSearchText(line.split(",")[0].trim(), alreadyContains, writer);
+                        writeImageUrlsFromSearchText(line.split(",")[0].trim(), alreadyContains);
                         System.out.println(cnt.getAndIncrement());
                     }
                 });
