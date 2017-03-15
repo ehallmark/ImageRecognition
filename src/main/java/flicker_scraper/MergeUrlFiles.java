@@ -16,6 +16,11 @@ public class MergeUrlFiles {
     public static void main(String[] args) throws IOException {
         File mergedFile = new File("all_flickr_urls_"+ LocalDate.now().toString()+".txt");
         File[] files = new File[]{
+                new File("flickr_urls.txt"),
+                new File("C:\\Users\\Evan\\Downloads\\flickr_urls2.txt"),
+                new File("C:\\Users\\Evan\\Downloads\\flickr_urls3.txt"),
+                new File("C:\\Users\\Evan\\Downloads\\flickr_urls4.txt"),
+                new File("C:\\Users\\Evan\\Downloads\\flickr_urls5.txt")
 
         };
 
@@ -37,6 +42,14 @@ public class MergeUrlFiles {
             });
         }
 
+        try {
+            pool.awaitTermination(Long.MAX_VALUE, TimeUnit.MICROSECONDS);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
+        System.out.println("Number of distinct urls: "+urls.size());
         BufferedWriter writer = new BufferedWriter(new FileWriter(mergedFile));
         for(String url : urls) {
             writer.write(url+"\n");
@@ -44,11 +57,5 @@ public class MergeUrlFiles {
         }
 
         writer.close();
-        try {
-            pool.awaitTermination(Long.MAX_VALUE, TimeUnit.MICROSECONDS);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
     }
 }
