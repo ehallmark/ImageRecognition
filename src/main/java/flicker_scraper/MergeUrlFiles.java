@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Created by Evan on 3/14/2017.
  */
 public class MergeUrlFiles {
-    public static File mergedFile = new File("all_flickr_urls.txt");
+    public static File mergedFile = new File("/mnt/bucket/all_flickr_urls.txt");
 
     public static void main(String[] args) throws IOException {
         File[] files = new File[]{
