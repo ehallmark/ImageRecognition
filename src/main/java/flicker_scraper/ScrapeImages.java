@@ -8,6 +8,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.net.URL;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by Evan on 3/15/2017.
@@ -16,7 +17,9 @@ public class ScrapeImages {
     public static final String IMAGE_DIR = "/mnt/bucket/images/";
     public static void main(String[] args) throws Exception{
         BufferedReader reader = new BufferedReader(new FileReader(MergeUrlFiles.mergedFile));
+        AtomicInteger cnt = new AtomicInteger(0);
         reader.lines().forEach(line->{
+            System.out.println(cnt.getAndIncrement());
             trySaveImageToGoogleCloud(line);
         });
     }
