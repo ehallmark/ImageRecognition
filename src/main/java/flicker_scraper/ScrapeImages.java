@@ -22,14 +22,13 @@ public class ScrapeImages {
     public static void main(String[] args) throws Exception{
         BufferedReader reader = new BufferedReader(new FileReader(MergeUrlFiles.mergedFile));
         Stream<String> lines = reader.lines();
-        System.out.println("Args: "+String.join("; ",args));
-        if(args.length>2) {
-            int offset = Integer.valueOf(args[1]);
+        if(args.length>0) {
+            int offset = Integer.valueOf(args[0]);
             System.out.println("Offset specified: "+offset);
             lines = lines.skip(offset);
         }
-        if(args.length>3) {
-            int limit = Integer.valueOf(args[2]);
+        if(args.length>1) {
+            int limit = Integer.valueOf(args[1]);
             System.out.println("Limit specified: "+limit);
             lines = lines.limit(limit);
         }
