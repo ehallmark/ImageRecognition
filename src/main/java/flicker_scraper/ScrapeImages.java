@@ -23,11 +23,12 @@ public class ScrapeImages {
         AtomicInteger cnt = new AtomicInteger(0);
         ForkJoinPool pool = new ForkJoinPool(Runtime.getRuntime().availableProcessors()*4);
         reader.lines().forEach(line->{
-            System.out.println(cnt.getAndIncrement());
             pool.execute(new RecursiveAction() {
                 @Override
                 protected void compute() {
-                    trySaveImageToGoogleCloud(line);
+                    if(trySaveImageToGoogleCloud(line)) {
+                        System.out.println(cnt.getAndIncrement());
+                    }
                 }
             });
         });
@@ -35,15 +36,19 @@ public class ScrapeImages {
         pool.awaitTermination(Long.MAX_VALUE, TimeUnit.MICROSECONDS);
     }
 
-    public static void trySaveImageToGoogleCloud(String urlString) {
+    public static boolean trySaveImageToGoogleCloud(String urlString) {
         try {
             BufferedImage image = ImageStreamer.loadImage(new URL(urlString));
             if(image!=null) {
                 File file = new File(IMAGE_DIR+urlString.hashCode()+".jpg");
-                ImageIO.write(image,"jpg",file);
+                if(!file.exists()) {
+                    ImageIO.write(image, "jpg", file);
+                    return true;
+                }
             }
         } catch(Exception e) {
             e.printStackTrace();
         }
+        return false;
     }
 }
