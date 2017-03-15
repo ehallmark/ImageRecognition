@@ -23,8 +23,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Created by Evan on 3/12/2017.
  */
 public class FlickrScraper {
-    private static final int timeout = 10000;
-    private static final int maxRetriesPerPage = 5;
+    private static final int timeout = 5000;
+    private static final int maxRetriesPerPage = 1;
     private static final AtomicInteger totalUrlCounter = new AtomicInteger(0);
     public static void writeImageUrlsFromSearchText(String searchText, Set<Integer> alreadyContains) {
         Document doc;
@@ -54,9 +54,11 @@ public class FlickrScraper {
                                     if (!url.endsWith("_s.jpg") && url.length() > 10)
                                         url = url.substring(0, url.length() - 6) + "_s.jpg";
                                     if(!alreadyContains.contains(url.hashCode())) {
-                                        ScrapeImages.trySaveImageToGoogleCloud(url);
-                                        shouldContinue = true;
-                                        alreadyContains.add(url.hashCode());
+                                        if(ScrapeImages.trySaveImageToGoogleCloud(url)) {
+                                            shouldContinue = true;
+                                            alreadyContains.add(url.hashCode());
+                                            totalUrlCounter.getAndIncrement();
+                                        }
                                     }
                                 }
                             }
@@ -66,7 +68,7 @@ public class FlickrScraper {
                     numRetriesOnCurrentPage=0;
                     System.out.println("Search: "+searchText);
                     System.out.println("Page: "+page);
-                    System.out.println("Images ingested so far: "+totalUrlCounter.getAndIncrement());
+                    System.out.println("Images ingested so far: "+totalUrlCounter.get());
                 } catch(Exception e) {
                     System.out.println("Error: "+e.getMessage());
                     System.out.println(searchURL);
@@ -82,32 +84,12 @@ public class FlickrScraper {
 
     public static void main(String[] args) throws Exception{
         // test
-        File flickrFile = new File("flickr_urls.txt");
-        Set<String> existingUrls = new HashSet<>();
-        System.out.println("Checking for existing URLs");
-        if(flickrFile.exists()) {
-            // read in values
-            BufferedReader reader = new BufferedReader(new FileReader(flickrFile));
-            reader.lines().forEach(line->{
-                existingUrls.add(line);
-            });
-        }
-        System.out.println("Total URLs so far: "+totalUrlCounter.addAndGet(existingUrls.size()));
-        BufferedWriter writer = new BufferedWriter(new FileWriter(flickrFile));
         BufferedReader reader = new BufferedReader(new FileReader(new File("search_words.txt")));
         try {
             System.out.println("Starting to clean URLs");
             Set<Integer> alreadyContains = new HashSet<>();
-            existingUrls.forEach(url -> {
-                alreadyContains.add(url.hashCode());
-                try {
-                    writer.write(url + "\n");
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
             System.out.println("Finished cleaning URLs");
-            ForkJoinPool pool = new ForkJoinPool(Runtime.getRuntime().availableProcessors()*8);
+            ForkJoinPool pool = new ForkJoinPool(Runtime.getRuntime().availableProcessors()*4);
             AtomicInteger cnt = new AtomicInteger(0);
             reader.lines().forEach(line -> {
                 pool.execute(new RecursiveAction() {
@@ -121,7 +103,6 @@ public class FlickrScraper {
             pool.shutdown();
             pool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
         } finally {
-            writer.close();
             reader.close();
         }
     }
