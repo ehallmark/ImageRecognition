@@ -8,46 +8,31 @@ import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by Evan on 3/14/2017.
  */
 public class MergeUrlFiles {
+    public static File mergedFile = new File("all_flickr_urls.txt");
+
     public static void main(String[] args) throws IOException {
-        File mergedFile = new File("all_flickr_urls_"+ LocalDate.now().toString()+".txt");
         File[] files = new File[]{
                 new File("flickr_urls.txt"),
-                new File("C:\\Users\\Evan\\Downloads\\flickr_urls2.txt"),
-                new File("C:\\Users\\Evan\\Downloads\\flickr_urls3.txt"),
-                new File("C:\\Users\\Evan\\Downloads\\flickr_urls4.txt"),
-                new File("C:\\Users\\Evan\\Downloads\\flickr_urls5.txt")
-
+                new File("flickr_urls2.txt"),
+                new File("flickr_urls3.txt"),
+                new File("flickr_urls4.txt"),
+                new File("flickr_urls5.txt"),
         };
-
-        ForkJoinPool pool = new ForkJoinPool(files.length);
-        Set<String> urls = Collections.synchronizedSet(new HashSet<>());
+        AtomicInteger count = new AtomicInteger(0);
+        Set<String> urls = (new HashSet<>());
         for(File file : files) {
-            pool.execute(new RecursiveAction() {
-                @Override
-                protected void compute() {
-                    try {
-                        BufferedReader reader = new BufferedReader(new FileReader(file));
-                        reader.lines().forEach(line->{
-                            urls.add(line);
-                        });
-                    }catch(Exception e) {
-                        e.printStackTrace();
-                    }
-                }
+            BufferedReader reader = new BufferedReader(new FileReader(file));
+            reader.lines().forEach(line->{
+                urls.add(line);
+                System.out.println(count.getAndIncrement());
             });
         }
-
-        try {
-            pool.awaitTermination(Long.MAX_VALUE, TimeUnit.MICROSECONDS);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
 
         System.out.println("Number of distinct urls: "+urls.size());
         BufferedWriter writer = new BufferedWriter(new FileWriter(mergedFile));
