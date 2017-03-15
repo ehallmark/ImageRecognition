@@ -21,7 +21,8 @@ public class ScrapeImages {
     public static void main(String[] args) throws Exception{
         BufferedReader reader = new BufferedReader(new FileReader(MergeUrlFiles.mergedFile));
         AtomicInteger cnt = new AtomicInteger(0);
-        ForkJoinPool pool = new ForkJoinPool(Runtime.getRuntime().availableProcessors()*4);
+        int numProcessors = Runtime.getRuntime().availableProcessors()*2;
+        ForkJoinPool pool = new ForkJoinPool(numProcessors);
         reader.lines().forEach(line->{
             pool.execute(new RecursiveAction() {
                 @Override
@@ -31,6 +32,9 @@ public class ScrapeImages {
                     }
                 }
             });
+            if(pool.getQueuedSubmissionCount()>numProcessors) {
+                pool.awaitQuiescence(1000,TimeUnit.MILLISECONDS);
+            }
         });
         pool.shutdown();
         pool.awaitTermination(Long.MAX_VALUE, TimeUnit.MICROSECONDS);

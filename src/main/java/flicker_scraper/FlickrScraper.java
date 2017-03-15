@@ -118,6 +118,7 @@ public class FlickrScraper {
                     }
                 });
             });
+            pool.shutdown();
             pool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
         } finally {
             writer.close();
