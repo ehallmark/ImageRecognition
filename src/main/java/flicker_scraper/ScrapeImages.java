@@ -20,7 +20,7 @@ public class ScrapeImages {
             try {
                 BufferedImage image = ImageStreamer.loadImage(new URL(line));
                 if(image!=null) {
-                    File file = new File(IMAGE_DIR+line.hashCode());
+                    File file = new File(IMAGE_DIR+line.hashCode()+".jpg");
                     ImageIO.write(image,"jpg",file);
                 }
             } catch(Exception e) {
