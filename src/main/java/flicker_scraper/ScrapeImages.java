@@ -19,11 +19,21 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ScrapeImages {
     public static final String IMAGE_DIR = "/mnt/bucket/images/";
     public static void main(String[] args) throws Exception{
+        int offset = 0;
+        int limit = 0;
+        if(args.length>2) {
+            offset += Integer.valueOf(args[1]);
+            System.out.println("Offset specified: "+offset);
+        }
+        if(args.length>3) {
+            limit += Integer.valueOf(args[2]);
+            System.out.println("Limit specified: "+limit);
+        }
         BufferedReader reader = new BufferedReader(new FileReader(MergeUrlFiles.mergedFile));
         AtomicInteger cnt = new AtomicInteger(0);
         int numProcessors = Runtime.getRuntime().availableProcessors()*2;
         ForkJoinPool pool = new ForkJoinPool(numProcessors);
-        reader.lines().forEach(line->{
+        reader.lines().skip(offset).limit(limit).forEach(line->{
             pool.execute(new RecursiveAction() {
                 @Override
                 protected void compute() {
