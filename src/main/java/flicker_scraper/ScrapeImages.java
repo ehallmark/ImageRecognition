@@ -12,6 +12,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 /**
  * Created by Evan on 3/15/2017.
@@ -19,21 +20,22 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ScrapeImages {
     public static final String IMAGE_DIR = "/mnt/bucket/images/";
     public static void main(String[] args) throws Exception{
-        int offset = 0;
-        int limit = 0;
+        BufferedReader reader = new BufferedReader(new FileReader(MergeUrlFiles.mergedFile));
+        Stream<String> lines = reader.lines();
         if(args.length>2) {
-            offset += Integer.valueOf(args[1]);
+            int offset = Integer.valueOf(args[1]);
             System.out.println("Offset specified: "+offset);
+            lines = lines.skip(offset);
         }
         if(args.length>3) {
-            limit += Integer.valueOf(args[2]);
+            int limit = Integer.valueOf(args[2]);
             System.out.println("Limit specified: "+limit);
+            lines = lines.limit(limit);
         }
-        BufferedReader reader = new BufferedReader(new FileReader(MergeUrlFiles.mergedFile));
         AtomicInteger cnt = new AtomicInteger(0);
         int numProcessors = Runtime.getRuntime().availableProcessors()*2;
         ForkJoinPool pool = new ForkJoinPool(numProcessors);
-        reader.lines().skip(offset).limit(limit).forEach(line->{
+        lines.forEach(line->{
             pool.execute(new RecursiveAction() {
                 @Override
                 protected void compute() {
@@ -42,7 +44,7 @@ public class ScrapeImages {
                     }
                 }
             });
-            if(pool.getQueuedSubmissionCount()>numProcessors) {
+            if(pool.getQueuedSubmissionCount()>2*numProcessors) {
                 pool.awaitQuiescence(1000,TimeUnit.MILLISECONDS);
             }
         });
