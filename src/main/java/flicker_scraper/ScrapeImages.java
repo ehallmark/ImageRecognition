@@ -8,6 +8,9 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.TimeUnit;
@@ -34,16 +37,36 @@ public class ScrapeImages {
         }
         AtomicInteger cnt = new AtomicInteger(0);
         int numProcessors = Runtime.getRuntime().availableProcessors()*2;
+        int numThreads = 8;
         ForkJoinPool pool = new ForkJoinPool(numProcessors);
+        List<Thread> threads = new ArrayList<>(numThreads);
         lines.forEach(line->{
-            pool.execute(new RecursiveAction() {
-                @Override
-                protected void compute() {
+            Thread thread = new Thread() {
+                public void run() {
                     if(trySaveImageToGoogleCloud(line)) {
                         System.out.println(cnt.getAndIncrement());
                     }
                 }
-            });
+            };
+            threads.add(thread);
+            if(threads.size()>=numThreads) {
+                List<Thread> taskThreads = new ArrayList<>(threads);
+                threads.clear();
+                pool.execute(new RecursiveAction() {
+                    @Override
+                    protected void compute() {
+                        taskThreads.forEach(t->t.start());
+                        taskThreads.forEach(t->{
+                            try {
+                                t.join();
+                            } catch(Exception e) {
+                                e.printStackTrace();
+                            }
+                        });
+                    }
+                });
+            }
+
             if(pool.getQueuedSubmissionCount()>2*numProcessors) {
                 pool.awaitQuiescence(1000,TimeUnit.MILLISECONDS);
             }
