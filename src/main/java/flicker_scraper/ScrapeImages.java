@@ -77,10 +77,10 @@ public class ScrapeImages {
 
     public static boolean trySaveImageToGoogleCloud(String urlString) {
         try {
-            BufferedImage image = ImageStreamer.loadImage(new URL(urlString));
-            if(image!=null) {
-                File file = new File(IMAGE_DIR+urlString.hashCode()+".jpg");
-                if(!file.exists()) {
+            File file = new File(IMAGE_DIR+urlString.hashCode()+".jpg");
+            if(!file.exists()) {
+                BufferedImage image = ImageStreamer.loadImage(new URL(urlString));
+                if(image!=null) {
                     ImageIO.write(image, "jpg", file);
                     return true;
                 }
