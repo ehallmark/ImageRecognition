@@ -32,9 +32,15 @@ public class ReadAndSaveFileListFromGCS {
                 return url;
             }
             else return null;
-        }).filter(url->url!=null).saveAsTextFile(IMAGE_LOCATIONS_FILE);
+        }).filter(url->url!=null).toLocalIterator().forEachRemaining(url->{
+            try {
+                writer.write(url + "\n");
+                writer.flush();
+            } catch(Exception e) {
+                e.printStackTrace();;
+            }
+        });
         System.out.println("Finished");
-        writer.flush();
         writer.close();
     }
 }
