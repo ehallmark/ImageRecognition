@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Created by Evan on 3/18/2017.
  */
 public class ReadAndSaveFileListFromGCS {
-    public static File IMAGE_LOCATIONS_FILE = new File("image_locations.txt");
+    public static File IMAGE_LOCATIONS_FILE = new File("/mnt/bucket/actual_image_locations.txt");
     public static void main(String[] args) throws Exception {
         File dir = new File(ScrapeImages.IMAGE_DIR);
         AtomicInteger cnt = new AtomicInteger(0);

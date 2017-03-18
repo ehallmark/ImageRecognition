@@ -42,7 +42,7 @@ import java.util.stream.StreamSupport;
 public class SparkAutoEncoder {
     public static void main(String[] args) throws Exception {
         // Spark stuff
-        File imageLocationsFile = new File("image_locations.txt");
+        File imageLocationsFile = new File("/mnt/bucket/image_locations.txt");
         boolean useSparkLocal = true;
         SparkConf sparkConf = new SparkConf();
         if (useSparkLocal) {
@@ -55,13 +55,12 @@ public class SparkAutoEncoder {
         // Algorithm
 
         int batch = 10;
-        int limit = 1000;
         int rows = 40;
         int cols = 40;
         int channels = 3;
         int numInputs = rows*cols*channels;
         int nEpochs = 2000;
-        int partitions = limit/batch;
+        int partitions = 1000;
 
         JavaRDD<DataSet> data = sc.textFile(imageLocationsFile.getAbsolutePath(),partitions)
                 .mapPartitions((Iterator<String> iter) -> {
@@ -71,7 +70,7 @@ public class SparkAutoEncoder {
                         INDArray vec = null;
                         if(iter.hasNext()) {
                             try {
-                                vec = ImageVectorizer.vectorizeImage(ImageStreamer.loadImage(new URL(iter.next())), numInputs);
+                                vec = ImageVectorizer.vectorizeImage(ImageStreamer.loadImage(new URL("http://storage.googleapis.com/image-scrape-dump/images/"+iter.next())), numInputs);
                             } catch(Exception e) {
 
                             }
