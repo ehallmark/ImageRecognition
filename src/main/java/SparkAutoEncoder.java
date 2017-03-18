@@ -1,5 +1,6 @@
 package main.java;
 
+import main.java.flicker_scraper.ReadAndSaveFileListFromGCS;
 import main.java.image_vectorization.ImageIterator;
 import main.java.image_vectorization.ImageStreamer;
 import main.java.image_vectorization.ImageVectorizer;
@@ -42,7 +43,7 @@ import java.util.stream.StreamSupport;
 public class SparkAutoEncoder {
     public static void main(String[] args) throws Exception {
         // Spark stuff
-        File imageLocationsFile = new File("/mnt/bucket/image_locations.txt");
+        File imageLocationsFile = ReadAndSaveFileListFromGCS.IMAGE_LOCATIONS_FILE;
         boolean useSparkLocal = true;
         SparkConf sparkConf = new SparkConf();
         if (useSparkLocal) {

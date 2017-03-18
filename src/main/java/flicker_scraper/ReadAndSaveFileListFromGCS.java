@@ -1,6 +1,9 @@
 package main.java.flicker_scraper;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
 
 import java.io.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -11,27 +14,32 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ReadAndSaveFileListFromGCS {
     public static File IMAGE_LOCATIONS_FILE = new File("/mnt/bucket/actual_image_locations.txt");
     public static void main(String[] args) throws Exception {
-        File dir = new File(ScrapeImages.IMAGE_DIR);
         File urls = MergeUrlFiles.mergedFile;
-        BufferedReader reader = new BufferedReader(new FileReader(urls));
+        boolean useSparkLocal = true;
+        SparkConf sparkConf = new SparkConf();
+        if (useSparkLocal) {
+            sparkConf.setMaster("local[*]");
+        }
+        sparkConf.setAppName("ReadAndSaveFileListFromGCS");
+        JavaSparkContext sc = new JavaSparkContext(sparkConf);
         AtomicInteger cnt = new AtomicInteger(0);
         BufferedWriter writer = new BufferedWriter(new FileWriter(IMAGE_LOCATIONS_FILE));
-        reader.lines().limit(4000000).forEach(line->{
+        sc.textFile(urls.getAbsolutePath()).foreach(line->{
             int hash = line.hashCode();
             String url = ScrapeImages.IMAGE_DIR+String.valueOf(hash)+".jpg";
             if(new File(url).exists()) {
                 try {
-                    writer.write(url + "\n");
-                    writer.flush();
+                    synchronized (writer){
+                        writer.write(url + "\n");
+                    }
                     System.out.println(cnt.getAndIncrement());
                 } catch(Exception e) {
                     e.printStackTrace();
                 }
             }
         });
-
         System.out.println("Finished");
+        writer.flush();
         writer.close();
-        reader.close();
     }
 }
