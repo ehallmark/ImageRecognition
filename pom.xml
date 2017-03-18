@@ -15,6 +15,7 @@
         <nd4j.version>0.7.2</nd4j.version>
         <dl4j.version>0.7.2</dl4j.version>
         <guava.version>19.0</guava.version>
+        <scala.binary.version>2.11</scala.binary.version>
         <jfreechart.version>1.0.13</jfreechart.version>
         <maven-shade-plugin.version>2.4.3</maven-shade-plugin.version>
         <exec-maven-plugin.version>1.4.0</exec-maven-plugin.version>
@@ -69,6 +70,12 @@
             <artifactId>postgresql</artifactId>
             <version>9.4-1206-jdbc42</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.ccil.cowan.tagsoup/tagsoup -->
+        <dependency>
+            <groupId>org.ccil.cowan.tagsoup</groupId>
+            <artifactId>tagsoup</artifactId>
+            <version>1.2.1</version>
+        </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
@@ -84,6 +91,18 @@
             <artifactId>deeplearning4j-core</artifactId>
             <version>${dl4j.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.deeplearning4j</groupId>
+            <artifactId>dl4j-spark_${scala.binary.version}</artifactId>
+            <version>${dl4j.version}</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-core_2.11 -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-core_2.11</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/com.github.lucarosellini.rJava/JRI -->
         <dependency>
             <groupId>com.github.lucarosellini.rJava</groupId>
