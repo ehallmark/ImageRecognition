@@ -32,9 +32,11 @@ public class ScrapeImages {
 
         AtomicInteger cnt = new AtomicInteger(0);
         lines.foreach(line->{
+            System.out.print(cnt.getAndIncrement()+" - ");
             if(trySaveImageToGoogleCloud(line)) {
-                System.out.println(cnt.getAndIncrement());
+                System.out.print("found");
             }
+            System.out.println();
         });
     }
 
