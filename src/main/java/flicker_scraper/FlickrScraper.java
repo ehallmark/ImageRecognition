@@ -92,7 +92,7 @@ public class FlickrScraper {
         if (useSparkLocal) {
             sparkConf.setMaster("local[*]");
         }
-        sparkConf.setAppName("ReadAndSaveFileListFromGCS");
+        sparkConf.setAppName("FlickrScraper");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
         AtomicInteger cnt = new AtomicInteger(0);
         Set<Integer> alreadyContains = Collections.synchronizedSet(new HashSet<>());

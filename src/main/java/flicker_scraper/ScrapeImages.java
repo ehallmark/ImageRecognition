@@ -26,7 +26,7 @@ public class ScrapeImages {
         if (useSparkLocal) {
             sparkConf.setMaster("local[*]");
         }
-        sparkConf.setAppName("ReadAndSaveFileListFromGCS");
+        sparkConf.setAppName("ScrapeImages");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
         JavaRDD<String> lines = sc.textFile(MergeUrlFiles.mergedFile.getAbsolutePath());
 

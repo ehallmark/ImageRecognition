@@ -1,7 +1,11 @@
 package main.java.flicker_scraper;
 
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaSparkContext;
+
 import java.io.*;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -25,14 +29,20 @@ public class MergeUrlFiles {
                 new File("flickr_urls5.txt"),
         };
         AtomicInteger count = new AtomicInteger(0);
-        Set<String> urls = (new HashSet<>());
-        for(File file : files) {
-            BufferedReader reader = new BufferedReader(new FileReader(file));
-            reader.lines().forEach(line->{
+        Set<String> urls = Collections.synchronizedSet(new HashSet<>());
+        boolean useSparkLocal = true;
+        SparkConf sparkConf = new SparkConf();
+        if (useSparkLocal) {
+            sparkConf.setMaster("local[*]");
+        }
+        sparkConf.setAppName("MergeUrls");
+        JavaSparkContext sc = new JavaSparkContext(sparkConf);
+        sc.parallelize(Arrays.asList(files)).foreach(file->{
+            sc.textFile(file.getAbsolutePath()).foreach(line->{
                 urls.add(line);
                 System.out.println(count.getAndIncrement());
             });
-        }
+        });
 
         System.out.println("Number of distinct urls: "+urls.size());
         BufferedWriter writer = new BufferedWriter(new FileWriter(mergedFile));
