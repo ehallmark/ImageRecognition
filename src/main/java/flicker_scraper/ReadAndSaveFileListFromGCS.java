@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Created by Evan on 3/18/2017.
  */
 public class ReadAndSaveFileListFromGCS {
-    public static File IMAGE_LOCATIONS_FILE = new File("/mnt/bucket/actual_image_locations.txt");
+    public static String IMAGE_LOCATIONS_FILE = "/mnt/bucket/actual_image_locations.txt";
     public static void main(String[] args) throws Exception {
         File urls = MergeUrlFiles.mergedFile;
         boolean useSparkLocal = true;
@@ -32,7 +32,7 @@ public class ReadAndSaveFileListFromGCS {
                 return url;
             }
             else return null;
-        }).filter(url->url!=null).saveAsTextFile(IMAGE_LOCATIONS_FILE.getAbsolutePath());
+        }).filter(url->url!=null).saveAsTextFile(IMAGE_LOCATIONS_FILE);
         System.out.println("Finished");
         writer.flush();
         writer.close();
