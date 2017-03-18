@@ -24,20 +24,15 @@ public class ReadAndSaveFileListFromGCS {
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
         AtomicInteger cnt = new AtomicInteger(0);
         BufferedWriter writer = new BufferedWriter(new FileWriter(IMAGE_LOCATIONS_FILE));
-        sc.textFile(urls.getAbsolutePath()).foreach(line->{
+        sc.textFile(urls.getAbsolutePath()).map(line->{
             int hash = line.hashCode();
             String url = ScrapeImages.IMAGE_DIR+String.valueOf(hash)+".jpg";
             if(new File(url).exists()) {
-                try {
-                    synchronized (writer){
-                        writer.write(url + "\n");
-                    }
-                    System.out.println(cnt.getAndIncrement());
-                } catch(Exception e) {
-                    e.printStackTrace();
-                }
+                System.out.println("Count: "+cnt.getAndIncrement());
+                return url;
             }
-        });
+            else return null;
+        }).filter(url->url!=null).saveAsTextFile(IMAGE_LOCATIONS_FILE.getAbsolutePath());
         System.out.println("Finished");
         writer.flush();
         writer.close();
