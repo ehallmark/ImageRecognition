@@ -2,6 +2,8 @@ package main.java.flicker_scraper;
 
 import main.java.image_vectorization.ImageStreamer;
 import main.java.image_vectorization.ImageVectorizer;
+import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaSparkContext;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -12,6 +14,7 @@ import java.io.*;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
@@ -84,26 +87,19 @@ public class FlickrScraper {
 
     public static void main(String[] args) throws Exception{
         // test
-        BufferedReader reader = new BufferedReader(new FileReader(new File("search_words.txt")));
-        try {
-            System.out.println("Starting to clean URLs");
-            Set<Integer> alreadyContains = new HashSet<>();
-            System.out.println("Finished cleaning URLs");
-            ForkJoinPool pool = new ForkJoinPool(Runtime.getRuntime().availableProcessors()*4);
-            AtomicInteger cnt = new AtomicInteger(0);
-            reader.lines().forEach(line -> {
-                pool.execute(new RecursiveAction() {
-                    @Override
-                    protected void compute() {
-                        writeImageUrlsFromSearchText(line.split(",")[0].trim(), alreadyContains);
-                        System.out.println(cnt.getAndIncrement());
-                    }
-                });
-            });
-            pool.shutdown();
-            pool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
-        } finally {
-            reader.close();
+        boolean useSparkLocal = true;
+        SparkConf sparkConf = new SparkConf();
+        if (useSparkLocal) {
+            sparkConf.setMaster("local[*]");
         }
+        sparkConf.setAppName("ReadAndSaveFileListFromGCS");
+        JavaSparkContext sc = new JavaSparkContext(sparkConf);
+        AtomicInteger cnt = new AtomicInteger(0);
+        Set<Integer> alreadyContains = Collections.synchronizedSet(new HashSet<>());
+        sc.textFile(new File("search_words.txt").getAbsolutePath()).foreach(line->{
+            writeImageUrlsFromSearchText(line.split(",")[0].trim(), alreadyContains);
+            System.out.println(cnt.getAndIncrement());
+        });
+
     }
 }
