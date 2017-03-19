@@ -96,7 +96,7 @@ public class FlickrScraper {
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
 
         List<Tuple2<String,List<String>>> urls = sc.textFile("gs://image-scrape-dump/all_countries.txt").map(line->{
-            String term = line.split(",")[0].trim();
+            String term = line.split("[,\\[\\]()]")[0].replaceAll("[^a-zA-z0-9- ]","").trim();
             return new Tuple2<>(term,writeImageUrlsFromSearchText(term));
         }).collect();
         System.out.println("Finished collecting urls... Now loading images");
