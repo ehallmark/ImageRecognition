@@ -109,7 +109,7 @@ public class SparkClassification {
                         //nIn and nOut specify depth. nIn here is the nChannels and nOut is the number of filters to be applied
                         .nIn(channels)
                         .stride(1, 1)
-                        .nOut(20)
+                        .nOut((numInputs+numOutputs)/2)
                         .activation(Activation.IDENTITY)
                         .build())
                 .layer(1, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
@@ -119,7 +119,7 @@ public class SparkClassification {
                 .layer(2, new ConvolutionLayer.Builder(5, 5)
                         //Note that nIn need not be specified in later layers
                         .stride(1, 1)
-                        .nOut(50)
+                        .nOut((numInputs+numOutputs+numOutputs+numOutputs)/4)
                         .activation(Activation.IDENTITY)
                         .build())
                 .layer(3, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
@@ -127,9 +127,9 @@ public class SparkClassification {
                         .stride(2,2)
                         .build())
                 .layer(4, new DenseLayer.Builder().activation(Activation.RELU)
-                        .nOut(500).build())
+                        .nOut(numOutputs).build())
                 .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MSE)
-                        .nOut(numInputs)
+                        .nOut(numOutputs)
                         .activation(Activation.SIGMOID)
                         .build())
                 .setInputType(InputType.convolutionalFlat(rows,cols,channels)) //See note below
