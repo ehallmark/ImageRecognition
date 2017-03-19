@@ -35,10 +35,7 @@ import javax.imageio.ImageIO;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.StreamSupport;
 
 /**
@@ -66,34 +63,46 @@ public class SparkAutoEncoder {
         int nEpochs = 2000;
         int partitions = 50;
 
-        JavaRDD<DataSet> data = sc.wholeTextFiles("gs://image-scrape-dump/images/",partitions)
-                .mapPartitions((Iterator<Tuple2<String,String>> iter) -> {
-                    Random rand = new Random();
-                    INDArray features = Nd4j.create(batch,numInputs);
-                    for(int i = 0; i < batch; i++) {
-                        INDArray vec = null;
-                        if(iter.hasNext()) {
-                            try {
-                                vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream(iter.next()._2.getBytes())), numInputs);
-                            } catch(Exception e) {
+        List<String> bucketNames = sc.textFile("gs://image-scrape-dump/all_countries.txt").collect();
+        List<JavaRDD<DataSet>> dataLists = new ArrayList<>();
+        bucketNames.forEach(bucket->{
+            try {
+                JavaRDD<DataSet> data = sc.wholeTextFiles("gs://image-scrape-dump/labeled_images/" + bucket, partitions)
+                        .mapPartitions((Iterator<Tuple2<String, String>> iter) -> {
+                            Random rand = new Random();
+                            INDArray features = Nd4j.create(batch, numInputs);
+                            for (int i = 0; i < batch; i++) {
+                                INDArray vec = null;
+                                if (iter.hasNext()) {
+                                    try {
+                                        vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream(iter.next()._2.getBytes())), numInputs);
+                                    } catch (Exception e) {
 
-                            }
-                        }
-                        if(vec==null) {
-                            if(iter.hasNext()) {
-                                i--;
-                            }else {
-                                for(int j = 0; j < numInputs; j++) {
-                                    features.putScalar(i,j,rand.nextDouble());
+                                    }
+                                }
+                                if (vec == null) {
+                                    if (iter.hasNext()) {
+                                        i--;
+                                    } else {
+                                        for (int j = 0; j < numInputs; j++) {
+                                            features.putScalar(i, j, rand.nextDouble());
+                                        }
+                                    }
+                                } else {
+                                    features.putRow(i, vec);
                                 }
                             }
-                        } else {
-                            features.putRow(i,vec);
-                        }
-                    }
-                    System.out.println("next line");
-                    return Arrays.asList(new DataSet(features,features)).iterator();
+                            System.out.println("next line");
+                            return Arrays.asList(new DataSet(features, features)).iterator();
+                        });
+                dataLists.add(data);
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
         });
+
+
+        JavaRDD<DataSet> data = sc.parallelize(dataLists).flatMap(d->d.toLocalIterator());
 
         System.out.println("Build model....");
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
