@@ -87,6 +87,7 @@ public class FlickrScraper {
     public static void main(String[] args) throws Exception{
         // test
         boolean useSparkLocal = false;
+        int numPartitions = 2;
         SparkConf sparkConf = new SparkConf();
         if (useSparkLocal) {
             sparkConf.setMaster("local[*]");
@@ -99,7 +100,13 @@ public class FlickrScraper {
             return new Tuple2<>(term,writeImageUrlsFromSearchText(term));
         }).collect();
         urls.forEach(pair->{
-            sc.parallelize(pair._2).saveAsObjectFile("gs://image-scrape-dump/labeled-images/"+pair._1.trim().toLowerCase().replaceAll(" ","_"));
+            sc.parallelize(pair._2).map(url->{
+                try {
+                    return ImageStreamer.loadImage(new URL(url));
+                } catch(Exception e) {
+                    return null;
+                }
+            }).filter(image->image!=null).repartition(numPartitions).saveAsTextFile("gs://image-scrape-dump/labeled-images/"+pair._1.trim().toLowerCase().replaceAll(" ","_"));
         });
         System.out.println("Finished saving");
         System.out.println("Num urls: "+urls.size());
