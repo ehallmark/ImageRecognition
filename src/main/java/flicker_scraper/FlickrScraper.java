@@ -3,6 +3,7 @@ package main.java.flicker_scraper;
 import main.java.image_vectorization.ImageStreamer;
 import main.java.image_vectorization.ImageVectorizer;
 import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.jsoup.Jsoup;
@@ -89,8 +90,9 @@ public class FlickrScraper {
         sparkConf.setAppName("FlickrScraper");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
 
-        JavaRDD<String> urls = sc.textFile("gs://image-scrape-dump/search_words.txt").map(line->{
-            return writeImageUrlsFromSearchText(line.split(",")[0].trim());
+        JavaRDD<String> urls = sc.textFile("gs://image-scrape-dump/search_words_test.txt").map(line->{
+            String term = line.split(",")[0].trim();
+            return writeImageUrlsFromSearchText(term);
         }).flatMap((list)->list.iterator()).distinct();
         System.out.println("Saving file");
         urls.saveAsTextFile("gs://image-scrape-dump/flickr_urls_spark.txt");
