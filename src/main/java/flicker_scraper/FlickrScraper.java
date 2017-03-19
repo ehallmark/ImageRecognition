@@ -101,11 +101,20 @@ public class FlickrScraper {
         }).collect();
         urls.forEach(pair->{
             sc.parallelize(pair._2).map(url->{
+                ByteArrayOutputStream baos = null;
                 try {
-                    return ImageStreamer.loadImage(new URL(url));
+                    baos = new ByteArrayOutputStream();
+                    ImageIO.write(ImageStreamer.loadImage(new URL(url)), "jpg", baos);
                 } catch(Exception e) {
                     return null;
                 }
+                finally {
+                    try {
+                        baos.close();
+                    } catch (Exception e) {
+                    }
+                }
+                return baos.toByteArray();
             }).filter(image->image!=null).repartition(numPartitions).saveAsTextFile("gs://image-scrape-dump/labeled-images/"+pair._1.trim().toLowerCase().replaceAll(" ","_"));
         });
         System.out.println("Finished saving");
