@@ -105,8 +105,8 @@ public class FlickrScraper {
                 try {
                     baos = new ByteArrayOutputStream();
                     ImageIO.write(ImageStreamer.loadImage(new URL(url)), "jpg", baos);
+                    return baos.toByteArray();
                 } catch(Exception e) {
-                    return null;
                 }
                 finally {
                     try {
@@ -114,7 +114,8 @@ public class FlickrScraper {
                     } catch (Exception e) {
                     }
                 }
-                return baos.toByteArray();
+                return null;
+
             }).filter(image->image!=null).repartition(numPartitions).saveAsTextFile("gs://image-scrape-dump/labeled-images/"+pair._1.trim().toLowerCase().replaceAll(" ","_"));
         });
         System.out.println("Finished saving");
