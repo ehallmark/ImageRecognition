@@ -68,7 +68,7 @@ public class SparkAutoEncoder {
         bucketNames.forEach(bucket->{
             try {
                 System.out.println("Trying bucket: "+bucket);
-                JavaRDD<DataSet> data = sc.wholeTextFiles("gs://image-scrape-dump/labeled_images/" + bucket, partitions)
+                JavaRDD<DataSet> data = sc.wholeTextFiles("gs://image-scrape-dump/labeled_images/" + bucket.toLowerCase().replaceAll("[^a-z0-9- ]","").replaceAll(" ","_").trim(), partitions)
                         .mapPartitions((Iterator<Tuple2<String, String>> iter) -> {
                             Random rand = new Random();
                             INDArray features = Nd4j.create(batch, numInputs);
@@ -98,12 +98,12 @@ public class SparkAutoEncoder {
                         });
                 dataLists.add(data);
             } catch(Exception e) {
-                e.printStackTrace();
             }
         });
 
+        System.out.println("DataList size: "+dataLists.size());
         JavaRDD<DataSet> data = sc.union(dataLists.get(0),dataLists);
-        
+
         System.out.println("Build model....");
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
                 .seed(69)
