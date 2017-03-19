@@ -41,6 +41,7 @@ import java.util.stream.StreamSupport;
  * Created by Evan on 3/18/2017.
  */
 public class SparkAutoEncoder {
+    public static final String BUCKET_URL = "http://storage.googleapis.com/image-scrape-dump/images/";
     public static void main(String[] args) throws Exception {
         // Spark stuff
         File imageLocationsFile = new File(ReadAndSaveFileListFromGCS.IMAGE_LOCATIONS_FILE);
@@ -71,7 +72,7 @@ public class SparkAutoEncoder {
                         INDArray vec = null;
                         if(iter.hasNext()) {
                             try {
-                                vec = ImageVectorizer.vectorizeImage(ImageStreamer.loadImage(new URL("http://storage.googleapis.com/image-scrape-dump/images/"+iter.next())), numInputs);
+                                vec = ImageVectorizer.vectorizeImage(ImageStreamer.loadImage(new URL(BUCKET_URL+iter.next())), numInputs);
                             } catch(Exception e) {
 
                             }

@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ScrapeImages {
     public static final String IMAGE_DIR = "/mnt/bucket/images/";
     public static void main(String[] args) throws Exception{
-        boolean useSparkLocal = true;
+        boolean useSparkLocal = false;
         SparkConf sparkConf = new SparkConf();
         if (useSparkLocal) {
             sparkConf.setMaster("local[*]");
