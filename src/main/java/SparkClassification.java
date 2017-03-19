@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SparkClassification {
     public static void main(String[] args) throws Exception {
         // Spark stuff
-        boolean useSparkLocal = false;
+        boolean useSparkLocal = true;
         SparkConf sparkConf = new SparkConf();
         if (useSparkLocal) {
             sparkConf.setMaster("local[*]");
@@ -72,7 +72,7 @@ public class SparkClassification {
                                 vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream(tup._2.getBytes())), numInputs);
                                 return new Tuple2<>(idx,vec);
                             } catch (Exception e) {
-
+                                e.printStackTrace();
                             }
                             return null;
                         }).filter(d->d!=null).collect();
