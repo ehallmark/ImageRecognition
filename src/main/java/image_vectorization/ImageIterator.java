@@ -1,10 +1,6 @@
 package main.java.image_vectorization;
 
-import com.sun.javafx.binding.StringFormatter;
-import org.apache.commons.codec.StringEncoder;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.LineIterator;
-import org.datavec.image.recordreader.ImageRecordReader;
+
 import org.deeplearning4j.berkeley.Pair;
 import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
