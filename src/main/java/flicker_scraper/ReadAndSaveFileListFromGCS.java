@@ -26,10 +26,11 @@ public class ReadAndSaveFileListFromGCS {
         AtomicInteger cnt = new AtomicInteger(0);
         sparkConf.setAppName("ReadAndSaveFileListFromGCS");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
-        List<String> data = sc.textFile("gs://image-scrape-dump/all_flickr_urls.txt").map(line->{
-            System.out.println("Line: "+line);
+        List<String> data = sc.binaryFiles("gs://image-scrape-dump/images").map(line->{
+            System.out.println("Line: "+line._1);
             System.out.println("Count: " + cnt.getAndIncrement());
-            try {
+            return line._1;
+            /*try {
                 final URL url = new URL("https://storage.googleapis.com/image-scrape-dump/images/" + line.hashCode() + ".jpg");
                 if (ImageStreamer.loadImage(url)!=null) {
                     System.out.println("GOOD");
@@ -40,9 +41,9 @@ public class ReadAndSaveFileListFromGCS {
             } catch( Exception e) {
                 e.printStackTrace();
             }
-            return null;
+            return null;*/
 
-        }).filter(x->x!=null).collect();
+        }).collect();
         System.out.println("Started saving");
         BufferedWriter writer = new BufferedWriter(new FileWriter(IMAGE_LOCATIONS_FILE));
         data.forEach(url->{
