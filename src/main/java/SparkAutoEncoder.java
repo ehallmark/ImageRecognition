@@ -1,5 +1,6 @@
 package main.java;
 
+import edu.stanford.nlp.io.StringOutputStream;
 import main.java.flicker_scraper.ReadAndSaveFileListFromGCS;
 import main.java.image_vectorization.ImageIterator;
 import main.java.image_vectorization.ImageStreamer;
@@ -28,7 +29,10 @@ import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.nd4j.linalg.ops.transforms.Transforms;
+import scala.Tuple2;
 
+import javax.imageio.ImageIO;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.net.URL;
 import java.util.Arrays;
@@ -43,7 +47,7 @@ import java.util.stream.StreamSupport;
 public class SparkAutoEncoder {
     public static void main(String[] args) throws Exception {
         // Spark stuff
-        boolean useSparkLocal = false;
+        boolean useSparkLocal = true;
         SparkConf sparkConf = new SparkConf();
         if (useSparkLocal) {
             sparkConf.setMaster("local[*]");
@@ -60,17 +64,17 @@ public class SparkAutoEncoder {
         int channels = 3;
         int numInputs = rows*cols*channels;
         int nEpochs = 2000;
-        int partitions = 10000;
+        int partitions = 50;
 
-        JavaRDD<DataSet> data = sc.textFile("gs://image-scrape-dump/all_flickr_urls.txt",partitions)
-                .mapPartitions((Iterator<String> iter) -> {
+        JavaRDD<DataSet> data = sc.wholeTextFiles("gs://image-scrape-dump/all_flickr_urls.txt",partitions)
+                .mapPartitions((Iterator<Tuple2<String,String>> iter) -> {
                     Random rand = new Random();
                     INDArray features = Nd4j.create(batch,numInputs);
                     for(int i = 0; i < batch; i++) {
                         INDArray vec = null;
                         if(iter.hasNext()) {
                             try {
-                                vec = ImageVectorizer.vectorizeImage(ImageStreamer.loadImage(new URL(iter.next())), numInputs);
+                                vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream(iter.next()._2.getBytes())), numInputs);
                             } catch(Exception e) {
 
                             }
@@ -87,6 +91,7 @@ public class SparkAutoEncoder {
                             features.putRow(i,vec);
                         }
                     }
+                    System.out.println("next line");
                     return Arrays.asList(new DataSet(features,features)).iterator();
         });
 
