@@ -55,7 +55,7 @@ public class SparkAutoEncoder {
 
         // Algorithm
 
-        int batch = 10;
+        int batch = 1;
         int rows = 40;
         int cols = 40;
         int channels = 3;
