@@ -99,19 +99,8 @@ public class FlickrScraper {
             return new Tuple2<>(term,writeImageUrlsFromSearchText(term));
         }).collect();
         urls.forEach(pair->{
-            sc.parallelize(pair._2).saveAsTextFile("gs://image-scrape-dump/labeled-images/"+pair._1.trim().toLowerCase().replaceAll(" ","_"));
+            sc.parallelize(pair._2).saveAsObjectFile("gs://image-scrape-dump/labeled-images/"+pair._1.trim().toLowerCase().replaceAll(" ","_"));
         });
-        System.out.println("Saving file");
-        BufferedWriter writer = new BufferedWriter(new FileWriter("/home/ehallmark1122/ImageRecognition/test-urls.txt"));
-        urls.forEach(url->{
-            try {
-                writer.write(url+"\n");
-            }catch(Exception e) {
-                e.printStackTrace();
-            }
-        });
-        writer.flush();
-        writer.close();
         System.out.println("Finished saving");
         System.out.println("Num urls: "+urls.size());
     }
