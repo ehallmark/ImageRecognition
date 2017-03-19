@@ -63,10 +63,11 @@ public class SparkAutoEncoder {
         int nEpochs = 2000;
         int partitions = 50;
 
-        List<String> bucketNames = sc.textFile("gs://image-scrape-dump/all_countries.txt").collect();
+        List<String> bucketNames = sc.textFile("gs://image-scrape-dump/all_countries.txt").distinct().collect();
         List<JavaRDD<DataSet>> dataLists = new ArrayList<>();
         bucketNames.forEach(bucket->{
             try {
+                System.out.println("Trying bucket: "+bucket);
                 JavaRDD<DataSet> data = sc.wholeTextFiles("gs://image-scrape-dump/labeled_images/" + bucket, partitions)
                         .mapPartitions((Iterator<Tuple2<String, String>> iter) -> {
                             Random rand = new Random();
@@ -101,9 +102,8 @@ public class SparkAutoEncoder {
             }
         });
 
-
-        JavaRDD<DataSet> data = sc.parallelize(dataLists).flatMap(d->d.toLocalIterator());
-
+        JavaRDD<DataSet> data = sc.union(dataLists.get(0),dataLists);
+        
         System.out.println("Build model....");
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
                 .seed(69)
