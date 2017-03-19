@@ -6,11 +6,14 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.deeplearning4j.berkeley.Pair;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.SocketTimeoutException;
 import java.net.URL;
@@ -90,13 +93,22 @@ public class FlickrScraper {
         sparkConf.setAppName("FlickrScraper");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
 
-        JavaRDD<String> urls = sc.textFile("gs://image-scrape-dump/search_words_test.txt").map(line->{
+        List<String> urls = sc.textFile("gs://image-scrape-dump/search_words_test.txt").map(line->{
             String term = line.split(",")[0].trim();
             return writeImageUrlsFromSearchText(term);
-        }).flatMap((list)->list.iterator()).distinct();
+        }).flatMap((list)->list.iterator()).distinct().collect();
         System.out.println("Saving file");
-        urls.saveAsTextFile("gs://image-scrape-dump/flickr_urls_spark.txt");
+        BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt"));
+        urls.forEach(url->{
+            try {
+                writer.write(url+"\n");
+            }catch(Exception e) {
+                e.printStackTrace();
+            }
+        });
+        writer.flush();
+        writer.close();
         System.out.println("Finished saving");
-        System.out.println("Num urls: "+urls.count());
+        System.out.println("Num urls: "+urls.size());
     }
 }
