@@ -25,7 +25,7 @@ public class ReadAndSaveFileListFromGCS {
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
         AtomicInteger cnt = new AtomicInteger(0);
         BufferedWriter writer = new BufferedWriter(new FileWriter(IMAGE_LOCATIONS_FILE));
-        sc.binaryFiles("gs://image-scrape-dump/images/").map(pair->{
+        sc.binaryFiles(ScrapeImages.IMAGE_DIR).map(pair->{
             String line = pair._1;
             System.out.println("Line: "+line);
             System.out.println("Count: " + cnt.getAndIncrement());
