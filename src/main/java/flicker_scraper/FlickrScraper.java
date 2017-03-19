@@ -87,7 +87,7 @@ public class FlickrScraper {
     public static void main(String[] args) throws Exception{
         // test
         boolean useSparkLocal = false;
-        int numPartitions = 2;
+        int numPartitions = 1;
         SparkConf sparkConf = new SparkConf();
         if (useSparkLocal) {
             sparkConf.setMaster("local[*]");
@@ -95,10 +95,11 @@ public class FlickrScraper {
         sparkConf.setAppName("FlickrScraper");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
 
-        List<Tuple2<String,List<String>>> urls = sc.textFile("gs://image-scrape-dump/search_words_test.txt").map(line->{
+        List<Tuple2<String,List<String>>> urls = sc.textFile("gs://image-scrape-dump/all_countries.txt").map(line->{
             String term = line.split(",")[0].trim();
             return new Tuple2<>(term,writeImageUrlsFromSearchText(term));
         }).collect();
+        System.out.println("Finished collecting urls... Now loading images");
         urls.forEach(pair->{
             sc.parallelize(pair._2).map(url->{
                 ByteArrayOutputStream baos = null;
