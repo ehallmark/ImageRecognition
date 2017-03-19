@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Created by Evan on 3/15/2017.
  */
 public class ScrapeImages {
+    //public static final String IMAGE_DIR = "/mnt/bucket/images/";
     public static final String IMAGE_DIR = "/mnt/bucket/images/";
     public static void main(String[] args) throws Exception{
         boolean useSparkLocal = false;

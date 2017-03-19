@@ -21,16 +21,20 @@ public class ReadAndSaveFileListFromGCS {
         if (useSparkLocal) {
             sparkConf.setMaster("local[*]");
         }
-        sparkConf.setAppName("ReadAndSaveFileListFromGCS");
-        JavaSparkContext sc = new JavaSparkContext(sparkConf);
         AtomicInteger cnt = new AtomicInteger(0);
         BufferedWriter writer = new BufferedWriter(new FileWriter(IMAGE_LOCATIONS_FILE));
-        sc.binaryFiles(ScrapeImages.IMAGE_DIR).map(pair->{
-            String line = pair._1;
+        sparkConf.setAppName("ReadAndSaveFileListFromGCS");
+        JavaSparkContext sc = new JavaSparkContext(sparkConf);
+        sc.textFile("gs://image-scrape-dump/all_flickr_urls.txt").map(line->{
             System.out.println("Line: "+line);
             System.out.println("Count: " + cnt.getAndIncrement());
-            return line;
-        }).toLocalIterator().forEachRemaining(url->{
+            try {
+                return sc.binaryFiles("gs://image-scrape-dump/images/" + line.hashCode() + ".jpg").count() > 0;
+            } catch( Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }).filter(x->x!=null).toLocalIterator().forEachRemaining(url->{
             try {
                 writer.write(url + "\n");
                 writer.flush();
