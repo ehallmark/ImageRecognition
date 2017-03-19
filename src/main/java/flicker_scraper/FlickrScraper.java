@@ -95,8 +95,10 @@ public class FlickrScraper {
         sparkConf.setAppName("FlickrScraper");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
 
-        List<Tuple2<String,List<String>>> urls = sc.textFile("gs://image-scrape-dump/all_countries.txt").map(line->{
-            String term = line.split("[,\\[\\]()]")[0].replaceAll("[^a-zA-z0-9- ]","").trim();
+        List<Tuple2<String,List<String>>> urls = sc.textFile("gs://image-scrape-dump/all_countries.txt").map(line-> {
+            String term = line.split("[,\\[\\]()]")[0].replaceAll("[^a-zA-z0-9- ]", "").trim().toLowerCase();
+            return term;
+        }).distinct().map(term->{
             return new Tuple2<>(term,writeImageUrlsFromSearchText(term));
         }).filter(tup->tup._2.size()>0).collect();
         System.out.println("Finished collecting urls... Now loading images");
@@ -121,7 +123,11 @@ public class FlickrScraper {
             long count = data.count();
             if(count>0) {
                 System.out.println("Num urls for: "+pair._1+", "+count);
-                data.saveAsTextFile("gs://image-scrape-dump/labeled-images/" + pair._1.trim().toLowerCase().replaceAll(" ", "_"));
+                try {
+                    data.saveAsTextFile("gs://image-scrape-dump/labeled-images/" + pair._1.replaceAll(" ", "_"));
+                } catch(Exception e) {
+                    e.printStackTrace();
+                }
             }
         });
         System.out.println("Finished saving");
