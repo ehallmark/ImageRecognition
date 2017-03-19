@@ -98,7 +98,7 @@ public class FlickrScraper {
         List<Tuple2<String,List<String>>> urls = sc.textFile("gs://image-scrape-dump/all_countries.txt").map(line-> {
             String term = line.split("[,\\[\\]()]")[0].replaceAll("[^a-zA-z0-9- ]", "").trim().toLowerCase();
             return term;
-        }).distinct().map(term->{
+        }).distinct().repartition(50).map(term->{
             return new Tuple2<>(term,writeImageUrlsFromSearchText(term));
         }).filter(tup->tup._2.size()>0).collect();
         System.out.println("Finished collecting urls... Now loading images");
