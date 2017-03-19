@@ -64,45 +64,28 @@ public class SparkAutoEncoder {
         int partitions = 50;
 
         List<String> bucketNames = sc.textFile("gs://image-scrape-dump/all_countries.txt").distinct().collect();
-        List<JavaRDD<DataSet>> dataLists = new ArrayList<>();
+        List<DataSet> dataLists = new ArrayList<>();
         bucketNames.forEach(bucket->{
             try {
                 System.out.println("Trying bucket: "+bucket);
-                JavaRDD<DataSet> data = sc.wholeTextFiles("gs://image-scrape-dump/labeled_images/" + bucket.toLowerCase().replaceAll("[^a-z0-9- ]","").replaceAll(" ","_").trim(), partitions)
-                        .mapPartitions((Iterator<Tuple2<String, String>> iter) -> {
-                            Random rand = new Random();
-                            INDArray features = Nd4j.create(batch, numInputs);
-                            for (int i = 0; i < batch; i++) {
-                                INDArray vec = null;
-                                if (iter.hasNext()) {
-                                    try {
-                                        vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream(iter.next()._2.getBytes())), numInputs);
-                                    } catch (Exception e) {
+                dataLists.addAll(
+                    sc.wholeTextFiles("gs://image-scrape-dump/labeled_images/" + bucket.toLowerCase().replaceAll("[^a-z0-9- ]","").replaceAll(" ","_").trim(), partitions)
+                        .map(tup -> {
+                            INDArray vec;
+                            try {
+                                vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream(tup._2.getBytes())), numInputs);
+                                return new DataSet(vec, vec);
+                            } catch (Exception e) {
 
-                                    }
-                                }
-                                if (vec == null) {
-                                    if (iter.hasNext()) {
-                                        i--;
-                                    } else {
-                                        for (int j = 0; j < numInputs; j++) {
-                                            features.putScalar(i, j, rand.nextDouble());
-                                        }
-                                    }
-                                } else {
-                                    features.putRow(i, vec);
-                                }
                             }
-                            System.out.println("next line");
-                            return Arrays.asList(new DataSet(features, features)).iterator();
-                        });
-                dataLists.add(data);
+                            return null;
+                        }).filter(d->d!=null).collect());
             } catch(Exception e) {
             }
         });
 
         System.out.println("DataList size: "+dataLists.size());
-        JavaRDD<DataSet> data = sc.union(dataLists.get(0),dataLists);
+        JavaRDD<DataSet> data = sc.parallelize(dataLists);
 
         System.out.println("Build model....");
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
