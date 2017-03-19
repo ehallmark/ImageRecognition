@@ -11,6 +11,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import scala.Tuple2;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -93,10 +94,13 @@ public class FlickrScraper {
         sparkConf.setAppName("FlickrScraper");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
 
-        List<String> urls = sc.textFile("gs://image-scrape-dump/search_words_test.txt").map(line->{
+        List<Tuple2<String,List<String>>> urls = sc.textFile("gs://image-scrape-dump/search_words_test.txt").map(line->{
             String term = line.split(",")[0].trim();
-            return writeImageUrlsFromSearchText(term);
-        }).flatMap((list)->list.iterator()).distinct().collect();
+            return new Tuple2<>(term,writeImageUrlsFromSearchText(term));
+        }).collect();
+        urls.forEach(pair->{
+            sc.parallelize(pair._2).saveAsTextFile("gc://image-scrape-dump/labeled-images/"+pair._1.trim().toLowerCase().replaceAll("_","_"));
+        });
         System.out.println("Saving file");
         BufferedWriter writer = new BufferedWriter(new FileWriter("/home/ehallmark1122/ImageRecognition/test-urls.txt"));
         urls.forEach(url->{
