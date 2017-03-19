@@ -98,7 +98,7 @@ public class FlickrScraper {
             return writeImageUrlsFromSearchText(term);
         }).flatMap((list)->list.iterator()).distinct().collect();
         System.out.println("Saving file");
-        BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt"));
+        BufferedWriter writer = new BufferedWriter(new FileWriter("/home/ehallmark1122/ImageRecognition/test-urls.txt"));
         urls.forEach(url->{
             try {
                 writer.write(url+"\n");
