@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ReadAndSaveFileListFromGCS {
     public static String IMAGE_LOCATIONS_FILE = "/home/ehallmark1122/ImageRecognition/actual_image_locations.txt";
     public static void main(String[] args) throws Exception {
-        boolean useSparkLocal = true;
+        boolean useSparkLocal = false;
         SparkConf sparkConf = new SparkConf();
         if (useSparkLocal) {
             sparkConf.setMaster("local[*]");
