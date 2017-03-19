@@ -26,7 +26,7 @@ public class ReadAndSaveFileListFromGCS {
         AtomicInteger cnt = new AtomicInteger(0);
         sparkConf.setAppName("ReadAndSaveFileListFromGCS");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
-        List<String> data = sc.binaryFiles("gs://image-scrape-dump/images").map(line->{
+        List<String> data = sc.wholeTextFiles("gs://image-scrape-dump/images",50).map(line->{
             System.out.println("Line: "+line._1);
             System.out.println("Count: " + cnt.getAndIncrement());
             return line._1;

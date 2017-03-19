@@ -66,7 +66,7 @@ public class SparkAutoEncoder {
         int nEpochs = 2000;
         int partitions = 50;
 
-        JavaRDD<DataSet> data = sc.wholeTextFiles("gs://image-scrape-dump/all_flickr_urls.txt",partitions)
+        JavaRDD<DataSet> data = sc.wholeTextFiles("gs://image-scrape-dump/images/",partitions)
                 .mapPartitions((Iterator<Tuple2<String,String>> iter) -> {
                     Random rand = new Random();
                     INDArray features = Nd4j.create(batch,numInputs);
