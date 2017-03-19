@@ -8,6 +8,8 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 
 import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -28,11 +30,20 @@ public class ReadAndSaveFileListFromGCS {
             System.out.println("Line: "+line);
             System.out.println("Count: " + cnt.getAndIncrement());
             try {
-                return sc.binaryFiles("gs://image-scrape-dump/images/" + line.hashCode() + ".jpg").count() > 0;
+                final URL url = new URL("https://storage.googleapis.com/image-scrape-dump/images/" + line.hashCode() + ".jpg");
+                HttpURLConnection huc = (HttpURLConnection) url.openConnection();
+                int responseCode = huc.getResponseCode();
+                if (responseCode != 404) {
+                    System.out.println("GOOD");
+                    return line;
+                } else {
+                    System.out.println("BAD");
+                }
             } catch( Exception e) {
                 e.printStackTrace();
-                return null;
             }
+            return null;
+
         }).filter(x->x!=null).saveAsTextFile("gs://image-scrape-dump/actual_image_locations.txt");
         System.out.println("Finished");
     }

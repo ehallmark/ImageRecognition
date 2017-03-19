@@ -29,10 +29,8 @@ public class ScrapeImages {
         }
         sparkConf.setAppName("ScrapeImages");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
-        JavaRDD<String> lines = sc.textFile(MergeUrlFiles.mergedFile.getAbsolutePath());
-
         AtomicInteger cnt = new AtomicInteger(0);
-        lines.foreach(line->{
+        sc.textFile("gs://image-scrape-dump/all_flickr_urls.txt").foreach(line->{
             System.out.print(cnt.getAndIncrement()+" - ");
             if(trySaveImageToGoogleCloud(line)) {
                 System.out.print("found");
