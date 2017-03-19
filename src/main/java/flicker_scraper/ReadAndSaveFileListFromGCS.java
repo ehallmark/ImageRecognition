@@ -8,15 +8,15 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 
 import java.io.*;
-import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by Evan on 3/18/2017.
  */
 public class ReadAndSaveFileListFromGCS {
-    public static String IMAGE_LOCATIONS_FILE = "/mnt/bucket/actual_image_locations.txt";
+    public static String IMAGE_LOCATIONS_FILE = "/home/ehallmark1122/ImageRecognition/actual_image_locations.txt";
     public static void main(String[] args) throws Exception {
         boolean useSparkLocal = true;
         SparkConf sparkConf = new SparkConf();
@@ -26,14 +26,12 @@ public class ReadAndSaveFileListFromGCS {
         AtomicInteger cnt = new AtomicInteger(0);
         sparkConf.setAppName("ReadAndSaveFileListFromGCS");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
-        sc.textFile("gs://image-scrape-dump/all_flickr_urls.txt").map(line->{
+        List<String> data = sc.textFile("gs://image-scrape-dump/all_flickr_urls.txt").map(line->{
             System.out.println("Line: "+line);
             System.out.println("Count: " + cnt.getAndIncrement());
             try {
                 final URL url = new URL("https://storage.googleapis.com/image-scrape-dump/images/" + line.hashCode() + ".jpg");
-                HttpURLConnection huc = (HttpURLConnection) url.openConnection();
-                int responseCode = huc.getResponseCode();
-                if (responseCode != 404) {
+                if (ImageStreamer.loadImage(url)!=null) {
                     System.out.println("GOOD");
                     return line;
                 } else {
@@ -44,7 +42,18 @@ public class ReadAndSaveFileListFromGCS {
             }
             return null;
 
-        }).filter(x->x!=null).saveAsTextFile("gs://image-scrape-dump/actual_image_locations.txt");
+        }).filter(x->x!=null).collect();
+        System.out.println("Started saving");
+        BufferedWriter writer = new BufferedWriter(new FileWriter(IMAGE_LOCATIONS_FILE));
+        data.forEach(url->{
+            try {
+                writer.write(url+"\n");
+            }catch(Exception e) {
+                e.printStackTrace();
+            }
+        });
+        writer.flush();
+        writer.close();
         System.out.println("Finished");
     }
 }
