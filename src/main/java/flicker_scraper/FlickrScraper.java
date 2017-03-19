@@ -124,7 +124,7 @@ public class FlickrScraper {
             if(count>0) {
                 System.out.println("Num urls for: "+pair._1+", "+count);
                 try {
-                    data.saveAsTextFile("gs://image-scrape-dump/labeled-images/" + pair._1.replaceAll(" ", "_"));
+                    data.saveAsObjectFile("gs://image-scrape-dump/labeled-images/" + pair._1.replaceAll(" ", "_"));
                 } catch(Exception e) {
                     e.printStackTrace();
                 }
