@@ -103,12 +103,12 @@ public class FlickrScraper {
         }).filter(tup->tup._2.size()>0).collect();
         System.out.println("Finished collecting urls... Now loading images");
         urls.forEach(pair->{
-            JavaRDD<byte[]> data = sc.parallelize(pair._2).map(url->{
+            JavaPairRDD<String,byte[]> data = sc.parallelize(pair._2).mapToPair(url->{
                 ByteArrayOutputStream baos = null;
                 try {
                     baos = new ByteArrayOutputStream();
                     ImageIO.write(ImageStreamer.loadImage(new URL(url)), "jpg", baos);
-                    return baos.toByteArray();
+                    return new Tuple2<>(pair._1,baos.toByteArray());
                 } catch(Exception e) {
                 }
                 finally {

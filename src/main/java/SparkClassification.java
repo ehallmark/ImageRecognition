@@ -2,6 +2,7 @@ package main.java;
 
 import main.java.image_vectorization.ImageVectorizer;
 import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
@@ -65,11 +66,11 @@ public class SparkClassification {
             try {
                 System.out.println("Trying bucket: "+bucket);
                 int idx = bucketIdx.get();
-                List<Tuple2<Integer,INDArray>> dataSets = sc.wholeTextFiles("gs://image-scrape-dump/labeled_images/" + bucket.toLowerCase().replaceAll("[^a-z0-9- ]","").replaceAll(" ","_").trim(), partitions)
+                List<Tuple2<Integer,INDArray>> dataSets = JavaPairRDD.fromJavaRDD(sc.objectFile("gs://image-scrape-dump/labeled_images/" + bucket.toLowerCase().replaceAll("[^a-z0-9- ]","").replaceAll(" ","_").trim()))
                         .map(tup -> {
                             INDArray vec;
                             try {
-                                vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream(tup._2.getBytes())), numInputs);
+                                vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream((byte[])tup._2)), numInputs);
                                 return new Tuple2<>(idx,vec);
                             } catch (Exception e) {
                                 e.printStackTrace();
