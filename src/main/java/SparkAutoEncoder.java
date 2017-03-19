@@ -41,7 +41,6 @@ import java.util.stream.StreamSupport;
  * Created by Evan on 3/18/2017.
  */
 public class SparkAutoEncoder {
-    public static final String BUCKET_URL = "http://storage.googleapis.com/image-scrape-dump/images/";
     public static void main(String[] args) throws Exception {
         // Spark stuff
         File imageLocationsFile = new File(ReadAndSaveFileListFromGCS.IMAGE_LOCATIONS_FILE);
@@ -62,9 +61,9 @@ public class SparkAutoEncoder {
         int channels = 3;
         int numInputs = rows*cols*channels;
         int nEpochs = 2000;
-        int partitions = 1000;
+        int partitions = 10000;
 
-        JavaRDD<DataSet> data = sc.textFile(imageLocationsFile.getAbsolutePath(),partitions)
+        JavaRDD<DataSet> data = sc.textFile("gs://image-scrape-dump/all_flickr_urls.txt",partitions)
                 .mapPartitions((Iterator<String> iter) -> {
                     Random rand = new Random();
                     INDArray features = Nd4j.create(batch,numInputs);
@@ -72,14 +71,18 @@ public class SparkAutoEncoder {
                         INDArray vec = null;
                         if(iter.hasNext()) {
                             try {
-                                vec = ImageVectorizer.vectorizeImage(ImageStreamer.loadImage(new URL(BUCKET_URL+iter.next())), numInputs);
+                                vec = ImageVectorizer.vectorizeImage(ImageStreamer.loadImage(new URL(iter.next())), numInputs);
                             } catch(Exception e) {
 
                             }
                         }
                         if(vec==null) {
-                            for(int j = 0; j < numInputs; j++) {
-                                features.putScalar(i,j,rand.nextDouble());
+                            if(iter.hasNext()) {
+                                i--;
+                            }else {
+                                for(int j = 0; j < numInputs; j++) {
+                                    features.putScalar(i,j,rand.nextDouble());
+                                }
                             }
                         } else {
                             features.putRow(i,vec);

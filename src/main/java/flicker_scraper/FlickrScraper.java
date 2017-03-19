@@ -88,6 +88,7 @@ public class FlickrScraper {
         }
         sparkConf.setAppName("FlickrScraper");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
+
         JavaRDD<String> urls = sc.textFile("gs://image-scrape-dump/search_words.txt").map(line->{
             return writeImageUrlsFromSearchText(line.split(",")[0].trim());
         }).flatMap((list)->list.iterator()).distinct();
