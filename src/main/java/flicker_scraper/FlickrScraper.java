@@ -98,10 +98,10 @@ public class FlickrScraper {
         List<Tuple2<String,List<String>>> urls = sc.textFile("gs://image-scrape-dump/all_countries.txt").map(line->{
             String term = line.split("[,\\[\\]()]")[0].replaceAll("[^a-zA-z0-9- ]","").trim();
             return new Tuple2<>(term,writeImageUrlsFromSearchText(term));
-        }).collect();
+        }).filter(tup->tup._2.size()>0).collect();
         System.out.println("Finished collecting urls... Now loading images");
         urls.forEach(pair->{
-            sc.parallelize(pair._2).map(url->{
+            JavaRDD<byte[]> data = sc.parallelize(pair._2).map(url->{
                 ByteArrayOutputStream baos = null;
                 try {
                     baos = new ByteArrayOutputStream();
@@ -117,7 +117,12 @@ public class FlickrScraper {
                 }
                 return null;
 
-            }).filter(image->image!=null).repartition(numPartitions).saveAsTextFile("gs://image-scrape-dump/labeled-images/"+pair._1.trim().toLowerCase().replaceAll(" ","_"));
+            }).filter(image->image!=null).repartition(numPartitions);
+            long count = data.count();
+            if(count>0) {
+                System.out.println("Num urls for: "+pair._1+", "+count);
+                data.saveAsTextFile("gs://image-scrape-dump/labeled-images/" + pair._1.trim().toLowerCase().replaceAll(" ", "_"));
+            }
         });
         System.out.println("Finished saving");
         System.out.println("Num urls: "+urls.size());
