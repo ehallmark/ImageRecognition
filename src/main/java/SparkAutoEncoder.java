@@ -43,8 +43,7 @@ import java.util.stream.StreamSupport;
 public class SparkAutoEncoder {
     public static void main(String[] args) throws Exception {
         // Spark stuff
-        File imageLocationsFile = new File(ReadAndSaveFileListFromGCS.IMAGE_LOCATIONS_FILE);
-        boolean useSparkLocal = true;
+        boolean useSparkLocal = false;
         SparkConf sparkConf = new SparkConf();
         if (useSparkLocal) {
             sparkConf.setMaster("local[*]");
