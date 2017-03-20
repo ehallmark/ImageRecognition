@@ -66,7 +66,7 @@ public class SparkClassification {
             try {
                 System.out.println("Trying bucket: "+bucket);
                 int idx = bucketIdx.get();
-                List<Tuple2<Integer,INDArray>> dataSets = sc.objectFile("gs://image-scrape-dump/labeled_images/" + bucket.toLowerCase().replaceAll("[^a-z0-9- ]","").replaceAll(" ","_").trim(), 50)
+                List<Tuple2<Integer,INDArray>> dataSets = sc.objectFile("gs://image-scrape-dump/labeled_images/" + bucket.toLowerCase().replaceAll("[^a-z0-9- ]","").replaceAll(" ","_").trim(), partitions)
                         .map((tup) -> {
                             INDArray vec;
                             try {
@@ -88,7 +88,7 @@ public class SparkClassification {
         });
         int numOutputs = bucketIdx.get();
         System.out.println("DataList size: "+dataLists.size());
-        JavaRDD<DataSet> data = sc.parallelize(dataLists)
+        JavaRDD<DataSet> data = sc.parallelize(dataLists,partitions)
                 .map(dataList->{
                     INDArray labelVec = Nd4j.zeros(numOutputs);
                     labelVec.putScalar(dataList._1,1.0);
