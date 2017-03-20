@@ -66,11 +66,12 @@ public class SparkClassification {
             try {
                 System.out.println("Trying bucket: "+bucket);
                 int idx = bucketIdx.get();
-                List<Tuple2<Integer,INDArray>> dataSets = JavaPairRDD.fromJavaRDD(sc.objectFile("gs://image-scrape-dump/labeled_images/" + bucket.toLowerCase().replaceAll("[^a-z0-9- ]","").replaceAll(" ","_").trim()))
-                        .map(tup -> {
+                List<Tuple2<Integer,INDArray>> dataSets = sc.objectFile("gs://image-scrape-dump/labeled_images/" + bucket.toLowerCase().replaceAll("[^a-z0-9- ]","").replaceAll(" ","_").trim(), 50)
+                        .map((tup) -> {
                             INDArray vec;
                             try {
-                                vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream((byte[])tup._2)), numInputs);
+                                vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream(((Tuple2<String,byte[]>)tup)._2)), numInputs);
+                                System.out.println("Vec: "+vec);
                                 return new Tuple2<>(idx,vec);
                             } catch (Exception e) {
                                 e.printStackTrace();
