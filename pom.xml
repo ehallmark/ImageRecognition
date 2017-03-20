@@ -123,7 +123,17 @@
             <artifactId>spark-core_2.11</artifactId>
             <version>2.1.0</version>
         </dependency>
-
+        <dependency>
+            <groupId>com.databricks</groupId>
+            <artifactId>spark-avro_2.11</artifactId>
+            <version>3.2.0</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.spark/spark-sql_2.11 -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql_2.11</artifactId>
+            <version>2.1.0</version>
+        </dependency>
         <!-- https://mvnrepository.com/artifact/com.github.lucarosellini.rJava/JRI -->
         <dependency>
             <groupId>com.github.lucarosellini.rJava</groupId>
