@@ -75,7 +75,7 @@ public class SparkClassification {
                 int idx = bucketIdx.get();
                 List<Tuple2<Integer,INDArray>> dataSets = spark.read()
                         .format(FlickrScraper.AVRO_FORMAT)
-                        .load(FlickrScraper.LABELED_IMAGES_BUCKET + bucket.toLowerCase().replaceAll("[^a-z0-9- ]","").replaceAll(" ","_").trim()+".avro")
+                        .load(FlickrScraper.LABELED_IMAGES_BUCKET + bucket.toLowerCase().replaceAll("[^a-z0-9- ]","").replaceAll(" ","_").trim())
                         .select("image")
                         .javaRDD()
                         .map((Row row) -> {
