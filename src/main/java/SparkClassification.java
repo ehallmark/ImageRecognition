@@ -81,7 +81,11 @@ public class SparkClassification {
                         .map((Row row) -> {
                             INDArray vec;
                             try {
-                                vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream((byte[])(row.get(1)))), numInputs);
+                                if(row.isNullAt(0)) {
+                                    System.out.println("Row[0] is null!");
+                                    return null;
+                                }
+                                vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream((byte[])(row.get(0)))), numInputs);
                                 System.out.println("Vec: "+vec);
                                 return new Tuple2<>(idx,vec);
                             } catch (Exception e) {
