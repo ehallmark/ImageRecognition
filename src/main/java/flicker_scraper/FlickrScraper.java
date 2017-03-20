@@ -1,15 +1,12 @@
 package main.java.flicker_scraper;
 
 import main.java.image_vectorization.ImageStreamer;
-import main.java.image_vectorization.ImageVectorizer;
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.deeplearning4j.berkeley.Pair;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -22,9 +19,7 @@ import java.io.*;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.util.*;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.RecursiveAction;
-import java.util.concurrent.TimeUnit;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**

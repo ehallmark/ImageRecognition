@@ -1,14 +1,10 @@
 package main.java.flicker_scraper;
 
-import main.java.SparkAutoEncoder;
-import main.java.image_vectorization.ImageStreamer;
-import org.apache.commons.io.FileUtils;
+
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 
 import java.io.*;
-import java.net.URL;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
