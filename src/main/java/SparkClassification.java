@@ -35,8 +35,7 @@ import scala.Tuple2;
 
 import javax.imageio.ImageIO;
 import java.io.ByteArrayInputStream;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -57,7 +56,10 @@ public class SparkClassification {
                 .getOrCreate();
 
         // Algorithm
-        List<String> bucketNames = sc.textFile("gs://image-scrape-dump/all_countries.txt").distinct().collect();
+        String[] bucketNames = sc.textFile("gs://image-scrape-dump/all_countries.txt").distinct().collect().toArray(new String[]{});
+        for(int i = 0; i < bucketNames.length; i++ ) {
+            bucketNames[i] = FlickrScraper.LABELED_IMAGES_BUCKET + bucketNames[i].toLowerCase().replaceAll("[^a-z0-9- ]","").replaceAll(" ","_").trim();
+        }
 
         int batch = 1;
         int rows = 40;
@@ -67,45 +69,40 @@ public class SparkClassification {
         int nEpochs = 2000;
         int partitions = 50;
 
-        List<Tuple2<Integer,INDArray>> dataLists = new ArrayList<>();
-        AtomicInteger bucketIdx = new AtomicInteger(0);
-        bucketNames.forEach(bucket->{
-            try {
-                System.out.println("Trying bucket: "+bucket);
-                int idx = bucketIdx.get();
-                List<Tuple2<Integer,INDArray>> dataSets = spark.read()
-                        .format(FlickrScraper.AVRO_FORMAT)
-                        .load(FlickrScraper.LABELED_IMAGES_BUCKET + bucket.toLowerCase().replaceAll("[^a-z0-9- ]","").replaceAll(" ","_").trim())
-                        .select("image")
-                        .javaRDD().repartition(partitions)
-                        .map((Row row) -> {
-                            INDArray vec;
-                            try {
-                                if(row.isNullAt(0)) {
-                                    System.out.println("Row[0] is null!");
-                                    return null;
-                                }
-                                vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream((byte[])(row.get(0)))), numInputs);
-                                return new Tuple2<>(idx,vec);
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
+        JavaRDD<Tuple2<String,INDArray>> dataLists = spark.read()
+                .format(FlickrScraper.AVRO_FORMAT)
+                .load(bucketNames)
+                .select("image","category")
+                .javaRDD().repartition(partitions)
+                .map((Row row) -> {
+                    INDArray vec;
+                    try {
+                        if(row.isNullAt(0) || row.isNullAt(1)) {
+                            System.out.println("Row has a null!");
                             return null;
-                        }).filter(d->d!=null).collect();
-                if(dataSets.size()>0) {
-                    bucketIdx.getAndIncrement();
-                    dataLists.addAll(dataSets);
-                }
+                        }
+                        vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream((byte[])(row.get(0)))), numInputs);
+                        return new Tuple2<>(row.get(1).toString(),vec);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    return null;
+                }).filter(d->d!=null);
 
-            } catch(Exception e) {
-            }
-        });
-        int numOutputs = bucketIdx.get();
-        System.out.println("DataList size: "+dataLists.size());
-        JavaRDD<DataSet> data = sc.parallelize(dataLists,partitions)
+        List<String> labels = dataLists.map(pair->pair._1).distinct().collect();
+        Map<String,Integer> invertedIdxMap = new HashMap<>();
+        for(int i = 0; i < labels.size(); i++) {
+            invertedIdxMap.put(labels.get(i),i);
+        }
+
+        int numOutputs = labels.size();
+
+        System.out.println("DataList size: "+dataLists.count());
+
+        JavaRDD<DataSet> data = dataLists.repartition(partitions)
                 .map(dataList->{
                     INDArray labelVec = Nd4j.zeros(numOutputs);
-                    labelVec.putScalar(dataList._1,1.0);
+                    labelVec.putScalar(invertedIdxMap.get(dataList._1),1.0);
                     return new DataSet(dataList._2,labelVec);
                 });
 
