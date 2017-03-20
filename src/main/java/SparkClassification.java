@@ -86,7 +86,6 @@ public class SparkClassification {
                                     return null;
                                 }
                                 vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream((byte[])(row.get(0)))), numInputs);
-                                System.out.println("Vec: "+vec);
                                 return new Tuple2<>(idx,vec);
                             } catch (Exception e) {
                                 e.printStackTrace();
