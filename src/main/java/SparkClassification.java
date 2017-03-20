@@ -1,10 +1,15 @@
 package main.java;
 
+import main.java.flicker_scraper.FlickrScraper;
 import main.java.image_vectorization.ImageVectorizer;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.TypedColumn;
+import org.apache.spark.sql.execution.columnar.ByteArrayColumnType;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.LearningRatePolicy;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
@@ -47,7 +52,9 @@ public class SparkClassification {
         }
         sparkConf.setAppName("Image Recognition Autoencoder");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
-
+        SparkSession spark = SparkSession.builder()
+                .appName("FlickrScraper")
+                .getOrCreate();
 
         // Algorithm
         List<String> bucketNames = sc.textFile("gs://image-scrape-dump/all_countries.txt").distinct().collect();
@@ -66,11 +73,15 @@ public class SparkClassification {
             try {
                 System.out.println("Trying bucket: "+bucket);
                 int idx = bucketIdx.get();
-                List<Tuple2<Integer,INDArray>> dataSets = sc.objectFile("gs://image-scrape-dump/labeled_images/" + bucket.toLowerCase().replaceAll("[^a-z0-9- ]","").replaceAll(" ","_").trim(), partitions)
-                        .map((tup) -> {
+                List<Tuple2<Integer,INDArray>> dataSets = spark.read()
+                        .format(FlickrScraper.AVRO_FORMAT)
+                        .load(FlickrScraper.LABELED_IMAGES_BUCKET + bucket.toLowerCase().replaceAll("[^a-z0-9- ]","").replaceAll(" ","_").trim()+".avro")
+                        .select("image")
+                        .javaRDD()
+                        .map((Row row) -> {
                             INDArray vec;
                             try {
-                                vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream(((Tuple2<String,byte[]>)tup)._2)), numInputs);
+                                vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream((byte[])(row.get(1)))), numInputs);
                                 System.out.println("Vec: "+vec);
                                 return new Tuple2<>(idx,vec);
                             } catch (Exception e) {

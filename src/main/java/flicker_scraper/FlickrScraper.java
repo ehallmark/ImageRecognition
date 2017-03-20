@@ -6,6 +6,9 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 import org.deeplearning4j.berkeley.Pair;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -29,6 +32,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class FlickrScraper {
     private static final int timeout = 5000;
+    public static final String AVRO_FORMAT = "com.databricks.spark.avro";
+    public static final String LABELED_IMAGES_BUCKET = "gs://image-scrape-dump/labeled-images/";
     private static final int maxRetriesPerPage = 1;
     private static final AtomicInteger totalUrlCounter = new AtomicInteger(0);
     public static List<String> writeImageUrlsFromSearchText(String searchText) {
@@ -86,6 +91,7 @@ public class FlickrScraper {
 
     public static void main(String[] args) throws Exception{
         // test
+        String searchWordFile = "gs://image-scrape-dump/all_countries.txt";
         boolean useSparkLocal = false;
         int numPartitions = 1;
         SparkConf sparkConf = new SparkConf();
@@ -94,8 +100,11 @@ public class FlickrScraper {
         }
         sparkConf.setAppName("FlickrScraper");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
+        SparkSession spark = SparkSession.builder()
+                .appName("FlickrScraper")
+                .getOrCreate();
 
-        List<Tuple2<String,List<String>>> urls = sc.textFile("gs://image-scrape-dump/all_countries.txt").map(line-> {
+        List<Tuple2<String,List<String>>> urls = sc.textFile(searchWordFile).map(line-> {
             String term = line.split("[,\\[\\]()]")[0].replaceAll("[^a-zA-z0-9- ]", "").trim().toLowerCase();
             return term;
         }).distinct().repartition(50).map(term->{
@@ -103,12 +112,18 @@ public class FlickrScraper {
         }).filter(tup->tup._2.size()>0).collect();
         System.out.println("Finished collecting urls... Now loading images");
         urls.forEach(pair->{
-            JavaPairRDD<String,byte[]> data = sc.parallelize(pair._2,50).mapToPair(url->{
+            JavaRDD<Image> data = sc.parallelize(pair._2,50).map(url->{
                 ByteArrayOutputStream baos = null;
                 try {
                     baos = new ByteArrayOutputStream();
-                    ImageIO.write(ImageStreamer.loadImage(new URL(url)), "jpg", baos);
-                    return new Tuple2<>(pair._1,baos.toByteArray());
+                    BufferedImage img = ImageStreamer.loadImage(new URL(url));
+                    if(img!=null) {
+                        ImageIO.write(img, "jpg", baos);
+                        Image myImage = new Image();
+                        myImage.setCategory(pair._1);
+                        myImage.setImage(baos.toByteArray());
+                        return myImage;
+                    }
                 } catch(Exception e) {
                 }
                 finally {
@@ -124,7 +139,10 @@ public class FlickrScraper {
             if(count>0) {
                 System.out.println("Num urls for: "+pair._1+", "+count);
                 try {
-                    data.saveAsObjectFile("gs://image-scrape-dump/labeled-images/" + pair._1.replaceAll(" ", "_"));
+                    Dataset<Row> dataset = spark.createDataFrame(data,Image.class);
+                    dataset.write()
+                            .format(AVRO_FORMAT)
+                            .save(LABELED_IMAGES_BUCKET+pair._1.replaceAll(" ", "_")+".avro");
                 } catch(Exception e) {
                     e.printStackTrace();
                 }
