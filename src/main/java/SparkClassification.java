@@ -1,5 +1,6 @@
 package main.java;
 
+import main.java.data_loader.DataLoader;
 import main.java.flicker_scraper.FlickrScraper;
 import main.java.image_vectorization.ImageVectorizer;
 import org.apache.spark.SparkConf;
@@ -69,42 +70,16 @@ public class SparkClassification {
         int nEpochs = 2000;
         int partitions = 50;
 
-        JavaRDD<Tuple2<String,INDArray>> dataLists = spark.read()
-                .format(FlickrScraper.AVRO_FORMAT)
-                .load(bucketNames)
-                .select("image","category")
-                .javaRDD().repartition(partitions)
-                .map((Row row) -> {
-                    INDArray vec;
-                    try {
-                        if(row.isNullAt(0) || row.isNullAt(1)) {
-                            System.out.println("Row has a null!");
-                            return null;
-                        }
-                        vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream((byte[])(row.get(0)))), numInputs);
-                        return new Tuple2<>(row.get(1).toString(),vec);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    return null;
-                }).filter(d->d!=null);
+        Tuple2<List<String>,JavaRDD<DataSet>> pair = DataLoader.loadClassificationData(spark,partitions,numInputs,bucketNames);
 
-        List<String> labels = dataLists.map(pair->pair._1).distinct().collect();
-        Map<String,Integer> invertedIdxMap = new HashMap<>();
-        for(int i = 0; i < labels.size(); i++) {
-            invertedIdxMap.put(labels.get(i),i);
-        }
+        List<String> labels = pair._1;
+        JavaRDD<DataSet> data = pair._2;
 
         int numOutputs = labels.size();
 
-        System.out.println("DataList size: "+dataLists.count());
+        System.out.println("DataList size: "+data.count());
+        System.out.println("Labels size: "+labels.size());
 
-        JavaRDD<DataSet> data = dataLists.repartition(partitions)
-                .map(dataList->{
-                    INDArray labelVec = Nd4j.zeros(numOutputs);
-                    labelVec.putScalar(invertedIdxMap.get(dataList._1),1.0);
-                    return new DataSet(dataList._2,labelVec);
-                });
 
         System.out.println("Build model....");
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
