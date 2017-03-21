@@ -87,7 +87,7 @@ public class FlickrScraper {
 
     public static void main(String[] args) throws Exception{
         // test
-        if(args.length<=2) throw new RuntimeException("Must specify args [1] searchWordFile and [2] bucketToSaveIn");
+        if(args.length<2) throw new RuntimeException("Must specify args [1] searchWordFile and [2] bucketToSaveIn");
         String searchWordFile = args[0]; // "gs://image-scrape-dump/top_us_cities.txt";
         String bucketToSaveIn = args[1]; // "us-cities";
         boolean useSparkLocal = false;
