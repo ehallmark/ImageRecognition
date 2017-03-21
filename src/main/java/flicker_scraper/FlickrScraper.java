@@ -87,7 +87,7 @@ public class FlickrScraper {
 
     public static void main(String[] args) throws Exception{
         // test
-        String searchWordFile = "gs://image-scrape-dump/all_countries.txt";
+        String searchWordFile = "gs://image-scrape-dump/top_us_cities.txt";
         boolean useSparkLocal = false;
         int numPartitions = 60;
         SparkConf sparkConf = new SparkConf();
@@ -135,7 +135,7 @@ public class FlickrScraper {
                 });
         System.out.println("Finished collecting images... Now saving images");
 
-        String imageBucket = "scrape-"+ System.currentTimeMillis();
+        String imageBucket = "us-cities";
         long count = data.count();
         if(count>0) {
             System.out.println("Num urls: "+count);
