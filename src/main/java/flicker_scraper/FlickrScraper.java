@@ -86,13 +86,17 @@ public class FlickrScraper {
     }
 
     public static void main(String[] args) throws Exception{
-        if(args.length<=2) throw new RuntimeException("Must specify args [1] searchWordFile and [2] bucketToSaveIn");
         // test
-        String searchWordFile = args[0]; // "gs://image-scrape-dump/top_us_cities.txt";
-        String bucketToSaveIn = args[1]; // "us-cities";
+
         boolean useSparkLocal = false;
         int numPartitions = 60;
+
         SparkConf sparkConf = new SparkConf();
+        String[] sparkArgs = sparkConf.get("args").split("\\s+");
+        if(sparkArgs.length<=2) throw new RuntimeException("Must specify args [1] searchWordFile and [2] bucketToSaveIn");
+        String searchWordFile = sparkArgs[0]; // "gs://image-scrape-dump/top_us_cities.txt";
+        String bucketToSaveIn = sparkArgs[1]; // "us-cities";
+
         if (useSparkLocal) {
             sparkConf.setMaster("local[*]");
         }
