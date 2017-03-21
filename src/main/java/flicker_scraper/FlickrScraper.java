@@ -86,8 +86,10 @@ public class FlickrScraper {
     }
 
     public static void main(String[] args) throws Exception{
+        if(args.length<=2) throw new RuntimeException("Must specify args [1] searchWordFile and [2] bucketToSaveIn");
         // test
-        String searchWordFile = "gs://image-scrape-dump/top_us_cities.txt";
+        String searchWordFile = args[0]; // "gs://image-scrape-dump/top_us_cities.txt";
+        String bucketToSaveIn = args[1]; // "us-cities";
         boolean useSparkLocal = false;
         int numPartitions = 60;
         SparkConf sparkConf = new SparkConf();
@@ -135,7 +137,6 @@ public class FlickrScraper {
                 });
         System.out.println("Finished collecting images... Now saving images");
 
-        String imageBucket = "us-cities";
         long count = data.count();
         if(count>0) {
             System.out.println("Num urls: "+count);
@@ -143,7 +144,7 @@ public class FlickrScraper {
                 Dataset<Row> dataset = spark.createDataFrame(data,Image.class);
                 dataset.write()
                         .format(AVRO_FORMAT)
-                        .save(LABELED_IMAGES_BUCKET+imageBucket);
+                        .save(LABELED_IMAGES_BUCKET+bucketToSaveIn);
             } catch(Exception e) {
                 e.printStackTrace();
             }
