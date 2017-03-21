@@ -111,21 +111,21 @@ public class FlickrScraper {
             String term = line.split("[,\\[\\]()]")[0].replaceAll("[^a-zA-z0-9- ]", "").trim().toLowerCase();
             return term;
         }).distinct().repartition(numPartitions).flatMap(term->{
-                return writeImageUrlsFromSearchText(term).stream().map(url->{
+            try {
+                return writeImageUrlsFromSearchText(term).stream().map(url -> {
                     ByteArrayOutputStream baos = null;
                     try {
                         baos = new ByteArrayOutputStream();
                         BufferedImage img = ImageStreamer.loadImage(new URL(url));
-                        if(img!=null) {
+                        if (img != null) {
                             ImageIO.write(img, "jpg", baos);
                             Image myImage = new Image();
                             myImage.setCategory(term);
                             myImage.setImage(baos.toByteArray());
                             return myImage;
                         }
-                    } catch(Exception e) {
-                    }
-                    finally {
+                    } catch (Exception e) {
+                    } finally {
                         try {
                             baos.close();
                         } catch (Exception e) {
@@ -133,7 +133,11 @@ public class FlickrScraper {
                     }
                     return null;
 
-                }).filter(image->image!=null).iterator();
+                }).filter(image -> image != null).iterator();
+            } catch(Exception e) {
+                e.printStackTrace();
+                return new ArrayList<Image>().iterator();
+            }
         });
         System.out.println("Finished collecting images... Now saving images");
 
