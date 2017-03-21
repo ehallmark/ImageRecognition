@@ -110,34 +110,31 @@ public class FlickrScraper {
         JavaRDD<Image> data = sc.textFile(searchWordFile).map(line-> {
             String term = line.split("[,\\[\\]()]")[0].replaceAll("[^a-zA-z0-9- ]", "").trim().toLowerCase();
             return term;
-        }).distinct().repartition(numPartitions).map(term->{
-            return new Tuple2<>(term,writeImageUrlsFromSearchText(term));
-        }).filter(tup->tup._2.size()>0).repartition(numPartitions)
-                .flatMap(tup->{
-                    return tup._2.stream().map(url->{
-                        ByteArrayOutputStream baos = null;
+        }).distinct().repartition(numPartitions).flatMap(term->{
+                return writeImageUrlsFromSearchText(term).stream().map(url->{
+                    ByteArrayOutputStream baos = null;
+                    try {
+                        baos = new ByteArrayOutputStream();
+                        BufferedImage img = ImageStreamer.loadImage(new URL(url));
+                        if(img!=null) {
+                            ImageIO.write(img, "jpg", baos);
+                            Image myImage = new Image();
+                            myImage.setCategory(term);
+                            myImage.setImage(baos.toByteArray());
+                            return myImage;
+                        }
+                    } catch(Exception e) {
+                    }
+                    finally {
                         try {
-                            baos = new ByteArrayOutputStream();
-                            BufferedImage img = ImageStreamer.loadImage(new URL(url));
-                            if(img!=null) {
-                                ImageIO.write(img, "jpg", baos);
-                                Image myImage = new Image();
-                                myImage.setCategory(tup._1);
-                                myImage.setImage(baos.toByteArray());
-                                return myImage;
-                            }
-                        } catch(Exception e) {
+                            baos.close();
+                        } catch (Exception e) {
                         }
-                        finally {
-                            try {
-                                baos.close();
-                            } catch (Exception e) {
-                            }
-                        }
-                        return null;
+                    }
+                    return null;
 
-                    }).filter(image->image!=null).iterator();
-                });
+                }).filter(image->image!=null).iterator();
+        });
         System.out.println("Finished collecting images... Now saving images");
 
         long count = data.count();
