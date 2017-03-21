@@ -18,6 +18,7 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.time.LocalDate;
 import java.util.*;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -88,7 +89,7 @@ public class FlickrScraper {
         // test
         String searchWordFile = "gs://image-scrape-dump/all_countries.txt";
         boolean useSparkLocal = false;
-        int numPartitions = 1;
+        int numPartitions = 60;
         SparkConf sparkConf = new SparkConf();
         if (useSparkLocal) {
             sparkConf.setMaster("local[*]");
@@ -101,51 +102,52 @@ public class FlickrScraper {
 
         JavaSparkContext sc = JavaSparkContext.fromSparkContext(spark.sparkContext());
 
-        List<Tuple2<String,List<String>>> urls = sc.textFile(searchWordFile).map(line-> {
+        JavaRDD<Image> data = sc.textFile(searchWordFile).map(line-> {
             String term = line.split("[,\\[\\]()]")[0].replaceAll("[^a-zA-z0-9- ]", "").trim().toLowerCase();
             return term;
-        }).distinct().repartition(50).map(term->{
+        }).distinct().repartition(numPartitions).map(term->{
             return new Tuple2<>(term,writeImageUrlsFromSearchText(term));
-        }).filter(tup->tup._2.size()>0).collect();
-        System.out.println("Finished collecting urls... Now loading images");
-        urls.forEach(pair->{
-            JavaRDD<Image> data = sc.parallelize(pair._2,50).map(url->{
-                ByteArrayOutputStream baos = null;
-                try {
-                    baos = new ByteArrayOutputStream();
-                    BufferedImage img = ImageStreamer.loadImage(new URL(url));
-                    if(img!=null) {
-                        ImageIO.write(img, "jpg", baos);
-                        Image myImage = new Image();
-                        myImage.setCategory(pair._1);
-                        myImage.setImage(baos.toByteArray());
-                        return myImage;
-                    }
-                } catch(Exception e) {
-                }
-                finally {
-                    try {
-                        baos.close();
-                    } catch (Exception e) {
-                    }
-                }
-                return null;
+        }).filter(tup->tup._2.size()>0).repartition(numPartitions)
+                .flatMap(tup->{
+                    return tup._2.stream().map(url->{
+                        ByteArrayOutputStream baos = null;
+                        try {
+                            baos = new ByteArrayOutputStream();
+                            BufferedImage img = ImageStreamer.loadImage(new URL(url));
+                            if(img!=null) {
+                                ImageIO.write(img, "jpg", baos);
+                                Image myImage = new Image();
+                                myImage.setCategory(tup._1);
+                                myImage.setImage(baos.toByteArray());
+                                return myImage;
+                            }
+                        } catch(Exception e) {
+                        }
+                        finally {
+                            try {
+                                baos.close();
+                            } catch (Exception e) {
+                            }
+                        }
+                        return null;
 
-            }).filter(image->image!=null).repartition(numPartitions);
-            long count = data.count();
-            if(count>0) {
-                System.out.println("Num urls for: "+pair._1+", "+count);
-                try {
-                    Dataset<Row> dataset = spark.createDataFrame(data,Image.class);
-                    dataset.write()
-                            .format(AVRO_FORMAT)
-                            .save(LABELED_IMAGES_BUCKET+pair._1.replaceAll(" ", "_"));
-                } catch(Exception e) {
-                    e.printStackTrace();
-                }
+                    }).filter(image->image!=null).iterator();
+                });
+        System.out.println("Finished collecting images... Now saving images");
+
+        String imageBucket = "scrape-"+ System.currentTimeMillis();
+        long count = data.count();
+        if(count>0) {
+            System.out.println("Num urls: "+count);
+            try {
+                Dataset<Row> dataset = spark.createDataFrame(data,Image.class);
+                dataset.write()
+                        .format(AVRO_FORMAT)
+                        .save(LABELED_IMAGES_BUCKET+imageBucket);
+            } catch(Exception e) {
+                e.printStackTrace();
             }
-        });
+        }
         System.out.println("Finished saving");
-        System.out.println("Num urls: "+urls.size());
     }
 }
