@@ -4,13 +4,13 @@ import main.java.image_vectorization.ImageStreamer;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.*;
+import org.apache.spark.sql.types.StructType;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import scala.reflect.ClassTag;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -92,7 +92,6 @@ public class FlickrScraper {
 
         SparkConf sparkConf = new SparkConf();
 
-
         if (useSparkLocal) {
             sparkConf.setMaster("local[*]");
         }
@@ -102,12 +101,10 @@ public class FlickrScraper {
                 .config(sparkConf)
                 .getOrCreate();
 
-        JavaSparkContext sc = JavaSparkContext.fromSparkContext(spark.sparkContext());
-
-        JavaRDD<Image> data = sc.textFile(searchWordFile).map(line-> {
+        Dataset<Image> data = spark.read().textFile(searchWordFile).map(line -> {
             String term = line.split("[,\\[\\]()]")[0].replaceAll("[^a-zA-z0-9- ]", "").trim().toLowerCase();
             return term;
-        }).distinct().repartition(numPartitions).flatMap(term->{
+        }, Encoders.STRING()).distinct().repartition(numPartitions).flatMap(term->{
             try {
                 return writeImageUrlsFromSearchText(term).stream().map(url -> {
                     ByteArrayOutputStream baos = null;
@@ -135,23 +132,21 @@ public class FlickrScraper {
                 e.printStackTrace();
                 return new ArrayList<Image>().iterator();
             }
-        });
+        },Encoders.bean(Image.class));
         System.out.println("Finished collecting images... Now saving images");
 
         try {
-            Dataset<Row> dataset = spark.createDataFrame(data,Image.class);
-            dataset.write()
+            data.write()
                     .format(AVRO_FORMAT)
                     .save(LABELED_IMAGES_BUCKET+bucketToSaveIn);
+            spark.close();
         } catch(Exception e) {
             e.printStackTrace();
         }
 
         System.out.println("Finished saving");
 
-        long count = data.count();
 
-        System.out.println("Num urls: "+count);
 
     }
 }
