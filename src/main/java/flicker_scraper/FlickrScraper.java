@@ -91,7 +91,7 @@ public class FlickrScraper {
         String searchWordFile = args[0]; // "gs://image-scrape-dump/top_us_cities.txt";
         String bucketToSaveIn = args[1]; // "us-cities";
         boolean useSparkLocal = false;
-        int numPartitions = 60;
+        int numPartitions = 76;
 
         SparkConf sparkConf = new SparkConf();
 
