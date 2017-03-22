@@ -135,14 +135,11 @@ public class FlickrScraper {
             data.write()
                     .format(AVRO_FORMAT)
                     .save(LABELED_IMAGES_BUCKET+bucketToSaveIn);
-            spark.close();
         } catch(Exception e) {
             e.printStackTrace();
         }
 
         System.out.println("Finished saving");
-
-
 
     }
 }
