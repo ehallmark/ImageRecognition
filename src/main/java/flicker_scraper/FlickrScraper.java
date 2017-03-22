@@ -2,16 +2,11 @@ package main.java.flicker_scraper;
 
 import main.java.image_vectorization.ImageStreamer;
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.*;
-import org.apache.spark.sql.streaming.StreamingQuery;
-import org.apache.spark.sql.types.StructType;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import scala.reflect.ClassTag;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -137,10 +132,9 @@ public class FlickrScraper {
         System.out.println("Finished collecting images... Now saving images");
 
         try {
-            StreamingQuery query = data.writeStream()
+            data.write()
                     .format(AVRO_FORMAT)
-                    .start(LABELED_IMAGES_BUCKET+bucketToSaveIn);
-            query.awaitTermination();
+                    .save(LABELED_IMAGES_BUCKET+bucketToSaveIn);
             spark.close();
         } catch(Exception e) {
             e.printStackTrace();
