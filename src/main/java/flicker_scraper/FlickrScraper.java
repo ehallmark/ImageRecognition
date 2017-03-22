@@ -5,6 +5,7 @@ import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.*;
+import org.apache.spark.sql.streaming.StreamingQuery;
 import org.apache.spark.sql.types.StructType;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -88,7 +89,7 @@ public class FlickrScraper {
         String searchWordFile = args[0]; // "gs://image-scrape-dump/top_us_cities.txt";
         String bucketToSaveIn = args[1]; // "us-cities";
         boolean useSparkLocal = false;
-        int numPartitions = 150;
+        //int numPartitions = 150;
 
         SparkConf sparkConf = new SparkConf();
 
@@ -104,7 +105,7 @@ public class FlickrScraper {
         Dataset<Image> data = spark.read().textFile(searchWordFile).map(line -> {
             String term = line.split("[,\\[\\]()]")[0].replaceAll("[^a-zA-z0-9- ]", "").trim().toLowerCase();
             return term;
-        }, Encoders.STRING()).distinct().repartition(numPartitions).flatMap(term->{
+        }, Encoders.STRING()).distinct().flatMap(term->{
             try {
                 return writeImageUrlsFromSearchText(term).stream().map(url -> {
                     ByteArrayOutputStream baos = null;
@@ -136,9 +137,10 @@ public class FlickrScraper {
         System.out.println("Finished collecting images... Now saving images");
 
         try {
-            data.write()
+            StreamingQuery query = data.writeStream()
                     .format(AVRO_FORMAT)
-                    .save(LABELED_IMAGES_BUCKET+bucketToSaveIn);
+                    .start(LABELED_IMAGES_BUCKET+bucketToSaveIn);
+            query.awaitTermination();
             spark.close();
         } catch(Exception e) {
             e.printStackTrace();
