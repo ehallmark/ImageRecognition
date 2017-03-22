@@ -11,17 +11,14 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import scala.Tuple2;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.SocketTimeoutException;
 import java.net.URL;
-import java.time.LocalDate;
 import java.util.*;
 
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by Evan on 3/12/2017.
@@ -31,7 +28,7 @@ public class FlickrScraper {
     public static final String AVRO_FORMAT = "com.databricks.spark.avro";
     public static final String LABELED_IMAGES_BUCKET = "gs://image-scrape-dump/labeled-images/";
     private static final int maxRetriesPerPage = 1;
-    private static final AtomicInteger totalUrlCounter = new AtomicInteger(0);
+    //private static final AtomicInteger totalUrlCounter = new AtomicInteger(0);
     public static List<String> writeImageUrlsFromSearchText(String searchText) {
         Document doc;
         boolean shouldContinue = true;
@@ -60,7 +57,7 @@ public class FlickrScraper {
                                 if (!url.startsWith("http")) url = "http:" + url;
                                 if (!url.endsWith("_s.jpg") && url.length() > 10) url = url.substring(0, url.length() - 6) + "_s.jpg";
                                 shouldContinue = true;
-                                totalUrlCounter.getAndIncrement();
+                                //totalUrlCounter.getAndIncrement();
                                 list.add(url);
                             }
                         }
@@ -68,12 +65,12 @@ public class FlickrScraper {
                 }
                 page++;
                 numRetriesOnCurrentPage=0;
-                System.out.println("Search: "+searchText);
-                System.out.println("Page: "+page);
-                System.out.println("Images ingested so far: "+totalUrlCounter.get());
+                //System.out.println("Search: "+searchText);
+                //System.out.println("Page: "+page);
+                //System.out.println("Images ingested so far: "+totalUrlCounter.get());
             } catch(Exception e) {
-                System.out.println("Error: "+e.getMessage());
-                System.out.println(searchURL);
+                //System.out.println("Error: "+e.getMessage());
+                //System.out.println(searchURL);
                 numRetriesOnCurrentPage++;
                 if(e instanceof SocketTimeoutException) {
                     if(numRetriesOnCurrentPage<maxRetriesPerPage) {
