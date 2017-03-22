@@ -33,7 +33,7 @@ public class FlickrScraper {
         List<String> list = new ArrayList<>();
         while(shouldContinue) {
             shouldContinue=false;
-            String searchURL = "https://www.flickr.com/search/?text=" + searchText + "&page=" + page;
+            String searchURL = "https://www.flickr.com/search/?text=\"" + searchText + "\"&page=" + page;
             try {
                 doc = Jsoup.connect(searchURL).timeout(timeout).get();
 
