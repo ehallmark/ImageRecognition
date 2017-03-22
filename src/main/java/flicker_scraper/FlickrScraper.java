@@ -141,18 +141,19 @@ public class FlickrScraper {
         });
         System.out.println("Finished collecting images... Now saving images");
 
-        long count = data.count();
-        if(count>0) {
-            System.out.println("Num urls: "+count);
-            try {
-                Dataset<Row> dataset = spark.createDataFrame(data,Image.class);
-                dataset.write()
-                        .format(AVRO_FORMAT)
-                        .save(LABELED_IMAGES_BUCKET+bucketToSaveIn);
-            } catch(Exception e) {
-                e.printStackTrace();
-            }
+        try {
+            Dataset<Row> dataset = spark.createDataFrame(data,Image.class);
+            dataset.write()
+                    .format(AVRO_FORMAT)
+                    .save(LABELED_IMAGES_BUCKET+bucketToSaveIn);
+        } catch(Exception e) {
+            e.printStackTrace();
         }
+
+        long count = data.count();
+
+        System.out.println("Num urls: "+count);
+
         System.out.println("Finished saving");
     }
 }
