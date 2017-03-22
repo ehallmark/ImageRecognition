@@ -43,7 +43,7 @@ public class DataLoader {
                             System.out.println("Row has a null!");
                             return null;
                         }
-                        String label = classifyFolderNames ? row.getrow.get(1).toString();
+                        String label = classifyFolderNames ? null : row.get(1).toString();
                         Integer idx = invertedIdxMap.get(label);
                         if(idx==null || idx<0) {
                             System.out.println("Invalid label: "+label);

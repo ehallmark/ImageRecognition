@@ -68,18 +68,14 @@ public class SparkClassification {
         int channels = 3;
         int numInputs = rows*cols*channels;
         int nEpochs = 2000;
-        int partitions = 50;
 
-        Tuple2<List<String>,JavaRDD<DataSet>> pair = DataLoader.loadClassificationData(spark,partitions,rows,cols,bucketNames);
-
-        List<String> labels = pair._1;
-        JavaRDD<DataSet> data = pair._2;
+        List<String> labels = Arrays.asList("Prefetch labels!");
+        JavaRDD<DataSet> data = DataLoader.loadClassificationData(spark,rows,cols,channels,labels,false,bucketNames);
 
         int numOutputs = labels.size();
 
         System.out.println("DataList size: "+data.count());
         System.out.println("Labels size: "+labels.size());
-
 
         System.out.println("Build model....");
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
