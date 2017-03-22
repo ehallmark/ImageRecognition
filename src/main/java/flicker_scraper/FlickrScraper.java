@@ -147,10 +147,11 @@ public class FlickrScraper {
             e.printStackTrace();
         }
 
+        System.out.println("Finished saving");
+
         long count = data.count();
 
         System.out.println("Num urls: "+count);
 
-        System.out.println("Finished saving");
     }
 }
