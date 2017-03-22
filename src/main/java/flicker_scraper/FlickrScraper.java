@@ -83,6 +83,13 @@ public class FlickrScraper {
         if(args.length<2) throw new RuntimeException("Must specify args [1] searchWordFile and [2] bucketToSaveIn");
         String searchWordFile = args[0]; // "gs://image-scrape-dump/top_us_cities.txt";
         String bucketToSaveIn = args[1]; // "us-cities";
+        int finalPartitionsToSave = 50;
+        try {
+            finalPartitionsToSave = Integer.valueOf(args[2]);
+            System.out.println("Final Partitions To Save Results: "+finalPartitionsToSave);
+        }catch(Exception e) {
+            System.out.println("No finalPartitionsToSave parameter specified. Default: "+finalPartitionsToSave);
+        }
         boolean useSparkLocal = false;
         //int numPartitions = 150;
 
@@ -132,7 +139,7 @@ public class FlickrScraper {
         System.out.println("Finished collecting images... Now saving images");
 
         try {
-            data.write()
+            data.repartition(finalPartitionsToSave).write()
                     .format(AVRO_FORMAT)
                     .save(LABELED_IMAGES_BUCKET+bucketToSaveIn);
         } catch(Exception e) {
