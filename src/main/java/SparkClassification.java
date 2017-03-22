@@ -63,14 +63,14 @@ public class SparkClassification {
         }
 
         int batch = 1;
-        int rows = 40;
-        int cols = 40;
+        int rows = 32;
+        int cols = 32;
         int channels = 3;
         int numInputs = rows*cols*channels;
         int nEpochs = 2000;
         int partitions = 50;
 
-        Tuple2<List<String>,JavaRDD<DataSet>> pair = DataLoader.loadClassificationData(spark,partitions,numInputs,bucketNames);
+        Tuple2<List<String>,JavaRDD<DataSet>> pair = DataLoader.loadClassificationData(spark,partitions,rows,cols,bucketNames);
 
         List<String> labels = pair._1;
         JavaRDD<DataSet> data = pair._2;
