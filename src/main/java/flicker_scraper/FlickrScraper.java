@@ -105,7 +105,7 @@ public class FlickrScraper {
                 .getOrCreate();
 
         Dataset<Image> data = spark.read().textFile(searchWordFile).map(line -> {
-            String term = line.split("[,\\[\\]()]")[0].replaceAll("[^a-zA-z0-9- ]", "").trim().toLowerCase();
+            String term = line.split("[,\\[\\]()]")[0].replaceAll("\\s+"," ").replaceAll("[^a-zA-z0-9- ]", "").trim().toLowerCase();
             return term;
         }, Encoders.STRING()).distinct().flatMap(term->{
             try {
