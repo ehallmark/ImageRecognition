@@ -71,7 +71,10 @@ public class SparkClassification {
         int numInputs = rows*cols*channels;
         int nEpochs = 2000;
 
-        List<String> labels = sc.textFile(fileName).distinct().collect();
+        List<String> labels = sc.textFile(fileName).map(line->{
+            return line.split("[,\\[\\]()]")[0].replaceAll("\\s+"," ").replaceAll("[^a-zA-z0-9- ]", "").trim().toLowerCase();
+        }).distinct().collect();
+
         JavaRDD<DataSet> data = DataLoader.loadClassificationData(spark,rows,cols,channels,labels,false,dataBucketName);
         int numOutputs = labels.size();
 

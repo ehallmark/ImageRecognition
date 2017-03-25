@@ -43,8 +43,7 @@ public class DataLoader {
                 .format(FlickrScraper.AVRO_FORMAT)
                 .load(bucketNames)
                 .select("image","category")
-                .javaRDD()
-                .map((Row row) -> {
+                .map(row->{
                     INDArray vec;
                     try {
                         if(row.isNullAt(0) || row.isNullAt(1)) {
@@ -62,6 +61,7 @@ public class DataLoader {
                             if(image.getHeight()!=height||image.getWidth()!=width) {
                                 image = Scalr.resize(image,Scalr.Method.ULTRA_QUALITY,height,width,Scalr.OP_ANTIALIAS);
                             }
+                            if(image==null)return null;
                             vec = ImageVectorizer.vectorizeImage(image, numInputs);
                             if(vec!=null) {
                                 labelVec.putScalar(idx, 1.0);
@@ -74,7 +74,7 @@ public class DataLoader {
                     }
                     return null;
 
-                }).filter(d->d!=null);
+                },Encoders.bean(DataSet.class)).filter(d->d!=null).toJavaRDD();
 
         return data;
     }
