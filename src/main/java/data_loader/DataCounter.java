@@ -9,6 +9,8 @@ import org.apache.spark.sql.SparkSession;
 import org.nd4j.linalg.dataset.DataSet;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by Evan on 3/25/2017.
@@ -31,10 +33,14 @@ public class DataCounter {
             throw new RuntimeException("Must specify databucket argument");
         }
 
+        AtomicLong cnt = new AtomicLong(0);
         String dataBucketNamePrefix = "gs://image-scrape-dump/labeled-images/";
         Arrays.stream(args).forEach(arg->{
             Dataset<Row> data = DataLoader.loadDataNames(spark,dataBucketNamePrefix+arg);
-            System.out.println("Count for "+arg+" Dataset: "+data.count());
+            long count = data.count();
+            System.out.println("Count for "+arg+" Dataset: "+count);
+            cnt.getAndAdd(count);
         });
+        System.out.println("Total count: "+cnt.get());
     }
 }
