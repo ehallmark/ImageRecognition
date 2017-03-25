@@ -55,8 +55,43 @@ public class DataLoader {
                                 image = Scalr.resize(image,Scalr.Method.ULTRA_QUALITY,height,width,Scalr.OP_ANTIALIAS);
                             }
                             vec = ImageVectorizer.vectorizeImage(image, numInputs);
-                            labelVec.putScalar(idx, 1.0);
-                            return new DataSet(vec, labelVec);
+                            if(vec!=null) {
+                                labelVec.putScalar(idx, 1.0);
+                                return new DataSet(vec, labelVec);
+                            }
+                        }
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    return null;
+
+                }).filter(d->d!=null);
+
+        return data;
+    }
+
+    public static JavaRDD<DataSet> loadAutoEncoderData(SparkSession spark, int height, int width, int channels, String... bucketNames) {
+        int numInputs = height*width*channels;
+        JavaRDD<DataSet> data = spark.read()
+                .format(FlickrScraper.AVRO_FORMAT)
+                .load(bucketNames)
+                .select("image")
+                .javaRDD()
+                .map((Row row) -> {
+                    INDArray vec;
+                    try {
+                        if(row.isNullAt(0)) {
+                            System.out.println("Row has a null!");
+                            return null;
+                        }
+                        BufferedImage image = ImageIO.read(new ByteArrayInputStream((byte[]) (row.get(0))));
+                        if(image.getHeight()!=height||image.getWidth()!=width) {
+                            image = Scalr.resize(image,Scalr.Method.ULTRA_QUALITY,height,width,Scalr.OP_ANTIALIAS);
+                        }
+                        vec = ImageVectorizer.vectorizeImage(image, numInputs);
+                        if(vec!=null) {
+                            return new DataSet(vec, vec);
                         }
 
                     } catch (Exception e) {

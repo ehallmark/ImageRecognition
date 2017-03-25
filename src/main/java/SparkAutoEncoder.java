@@ -1,6 +1,7 @@
 package main.java;
 
 import edu.stanford.nlp.io.StringOutputStream;
+import main.java.data_loader.DataLoader;
 import main.java.flicker_scraper.ReadAndSaveFileListFromGCS;
 import main.java.image_vectorization.ImageIterator;
 import main.java.image_vectorization.ImageStreamer;
@@ -8,6 +9,7 @@ import main.java.image_vectorization.ImageVectorizer;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.SparkSession;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.LearningRatePolicy;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
@@ -44,13 +46,16 @@ import java.util.stream.StreamSupport;
 public class SparkAutoEncoder {
     public static void main(String[] args) throws Exception {
         // Spark stuff
-        boolean useSparkLocal = true;
+        boolean useSparkLocal = false;
         SparkConf sparkConf = new SparkConf();
         if (useSparkLocal) {
             sparkConf.setMaster("local[*]");
         }
-        sparkConf.setAppName("Image Recognition Autoencoder");
+        sparkConf.setAppName("Image Recognition AutoEncoder");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
+        SparkSession spark = SparkSession.builder()
+                .appName("FlickrScraper")
+                .getOrCreate();
 
 
         // Algorithm
@@ -61,31 +66,9 @@ public class SparkAutoEncoder {
         int channels = 3;
         int numInputs = rows*cols*channels;
         int nEpochs = 2000;
-        int partitions = 50;
 
-        List<String> bucketNames = sc.textFile("gs://image-scrape-dump/all_countries.txt").distinct().collect();
-        List<DataSet> dataLists = new ArrayList<>();
-        bucketNames.forEach(bucket->{
-            try {
-                System.out.println("Trying bucket: "+bucket);
-                dataLists.addAll(
-                    sc.wholeTextFiles("gs://image-scrape-dump/labeled_images/" + bucket.toLowerCase().replaceAll("[^a-z0-9- ]","").replaceAll(" ","_").trim(), partitions)
-                        .map(tup -> {
-                            INDArray vec;
-                            try {
-                                vec = ImageVectorizer.vectorizeImage(ImageIO.read(new ByteArrayInputStream(tup._2.getBytes())), numInputs);
-                                return new DataSet(vec, vec);
-                            } catch (Exception e) {
-
-                            }
-                            return null;
-                        }).filter(d->d!=null).collect());
-            } catch(Exception e) {
-            }
-        });
-
-        System.out.println("DataList size: "+dataLists.size());
-        JavaRDD<DataSet> data = sc.parallelize(dataLists);
+        String dataBucketName = "gs://image-scrape-dump/labeled-images/random";
+        JavaRDD<DataSet> data = DataLoader.loadAutoEncoderData(spark,rows,cols,channels,dataBucketName);
 
         System.out.println("Build model....");
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
@@ -138,28 +121,7 @@ public class SparkAutoEncoder {
 
         //Create the Spark network
         SparkDl4jMultiLayer model = new SparkDl4jMultiLayer(sc, conf, tm);
-
-        //Execute training:
-        System.out.println("Train model....");
-        model.setListeners(new ScoreIterationListener(1));
-        for( int i=0; i<nEpochs; i++ ) {
-            model.fit(data);
-            System.out.println("*** Completed epoch {"+i+"} ***");
-
-            System.out.println("Evaluate model....");
-            double totalError = data.map(ds->{
-                INDArray output = model.getNetwork().output(ds.getFeatureMatrix(), false);
-                double error = 0;
-                for(int r = 0; r < output.rows(); r++) {
-                    double sim = Transforms.cosineSim(output.getRow(r),ds.getFeatureMatrix().getRow(r));
-                    if(new Double(sim).isNaN()) error+= 2.0;
-                    else error+= 1.0-sim;
-                }
-                return error;
-            }).reduce((a,b)->a+b);
-            System.out.println("Error: "+totalError);
-        }
-        System.out.println("****************Example finished********************");
+        ModelRunner.runAutoEncoderModel(model,data,nEpochs);
 
     }
 }

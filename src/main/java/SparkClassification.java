@@ -11,6 +11,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.TypedColumn;
 import org.apache.spark.sql.execution.columnar.ByteArrayColumnType;
+import org.deeplearning4j.eval.Evaluation;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.LearningRatePolicy;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
@@ -45,22 +46,20 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SparkClassification {
     public static void main(String[] args) throws Exception {
         // Spark stuff
-        boolean useSparkLocal = true;
+        boolean useSparkLocal = false;
         SparkConf sparkConf = new SparkConf();
         if (useSparkLocal) {
             sparkConf.setMaster("local[*]");
         }
-        sparkConf.setAppName("Image Recognition Autoencoder");
+        sparkConf.setAppName("Image Recognition Classification");
         JavaSparkContext sc = new JavaSparkContext(sparkConf);
         SparkSession spark = SparkSession.builder()
                 .appName("FlickrScraper")
                 .getOrCreate();
 
         // Algorithm
-        String[] bucketNames = sc.textFile("gs://image-scrape-dump/all_countries.txt").distinct().collect().toArray(new String[]{});
-        for(int i = 0; i < bucketNames.length; i++ ) {
-            bucketNames[i] = FlickrScraper.LABELED_IMAGES_BUCKET + bucketNames[i].toLowerCase().replaceAll("[^a-z0-9- ]","").replaceAll(" ","_").trim();
-        }
+        String fileName = "gs://image-scrape-dump/animals.txt";
+        String dataBucketName = "gs://image-scrape-dump/labeled-images/animals";
 
         int batch = 1;
         int rows = 32;
@@ -69,9 +68,8 @@ public class SparkClassification {
         int numInputs = rows*cols*channels;
         int nEpochs = 2000;
 
-        List<String> labels = Arrays.asList("Prefetch labels!");
-        JavaRDD<DataSet> data = DataLoader.loadClassificationData(spark,rows,cols,channels,labels,false,bucketNames);
-
+        List<String> labels = sc.textFile(fileName).distinct().collect();
+        JavaRDD<DataSet> data = DataLoader.loadClassificationData(spark,rows,cols,channels,labels,false,dataBucketName);
         int numOutputs = labels.size();
 
         System.out.println("DataList size: "+data.count());
@@ -129,27 +127,7 @@ public class SparkClassification {
         //Create the Spark network
         SparkDl4jMultiLayer model = new SparkDl4jMultiLayer(sc, conf, tm);
 
-        //Execute training:
-        System.out.println("Train model....");
-        model.setListeners(new ScoreIterationListener(1));
-        for( int i=0; i<nEpochs; i++ ) {
-            model.fit(data);
-            System.out.println("*** Completed epoch {"+i+"} ***");
-
-            System.out.println("Evaluate model....");
-            double totalError = data.map(ds->{
-                INDArray output = model.getNetwork().output(ds.getFeatureMatrix(), false);
-                double error = 0;
-                for(int r = 0; r < output.rows(); r++) {
-                    double sim = Transforms.cosineSim(output.getRow(r),ds.getFeatureMatrix().getRow(r));
-                    if(new Double(sim).isNaN()) error+= 2.0;
-                    else error+= 1.0-sim;
-                }
-                return error;
-            }).reduce((a,b)->a+b);
-            System.out.println("Error: "+totalError);
-        }
-        System.out.println("****************Example finished********************");
+        ModelRunner.runClassificationModel(model,data,nEpochs);
 
     }
 }
