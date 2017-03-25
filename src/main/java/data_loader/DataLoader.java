@@ -4,6 +4,7 @@ import main.java.flicker_scraper.FlickrScraper;
 import main.java.flicker_scraper.Image;
 import main.java.image_vectorization.ImageVectorizer;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -24,6 +25,13 @@ import java.util.Map;
  * Created by Evan on 3/21/2017.
  */
 public class DataLoader {
+
+    public static Dataset<Row> loadDataNames(SparkSession spark, String bucket) {
+        return spark.read()
+                .format(FlickrScraper.AVRO_FORMAT)
+                .load(bucket);
+    }
+
     public static JavaRDD<DataSet> loadClassificationData(SparkSession spark, int height, int width, int channels, List<String> labels, boolean classifyFolderNames, String... bucketNames) {
         Map<String,Integer> invertedIdxMap = new HashMap<>();
         for(int i = 0; i < labels.size(); i++) {
