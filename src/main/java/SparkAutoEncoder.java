@@ -57,6 +57,9 @@ public class SparkAutoEncoder {
                 .appName("FlickrScraper")
                 .getOrCreate();
 
+        if(args.length<1) {
+            throw new RuntimeException("Must specify databucket argument");
+        }
 
         // Algorithm
 
@@ -67,7 +70,7 @@ public class SparkAutoEncoder {
         int numInputs = rows*cols*channels;
         int nEpochs = 2000;
 
-        String dataBucketName = "gs://image-scrape-dump/labeled-images/random";
+        String dataBucketName = "gs://image-scrape-dump/labeled-images/"+args[0];
         JavaRDD<DataSet> data = DataLoader.loadAutoEncoderData(spark,rows,cols,channels,dataBucketName);
 
         System.out.println("Build model....");

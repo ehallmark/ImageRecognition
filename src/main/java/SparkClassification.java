@@ -57,9 +57,12 @@ public class SparkClassification {
                 .appName("FlickrScraper")
                 .getOrCreate();
 
+        if(args.length<2) {
+            throw new RuntimeException("Must specify filename and databucket name");
+        }
         // Algorithm
-        String fileName = "gs://image-scrape-dump/animals.txt";
-        String dataBucketName = "gs://image-scrape-dump/labeled-images/animals";
+        String fileName = "gs://image-scrape-dump/"+args[0];
+        String dataBucketName = "gs://image-scrape-dump/labeled-images/"+args[1];
 
         int batch = 1;
         int rows = 32;
