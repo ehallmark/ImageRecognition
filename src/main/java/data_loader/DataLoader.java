@@ -44,26 +44,32 @@ public class DataLoader {
                 .load(bucketNames)
                 .select("image","category")
                 .map(row->{
+                    if(row.isNullAt(0) || row.isNullAt(1)) {
+                        System.out.println("Row has a null!");
+                        return null;
+                    }
+                    Image image = new Image();
+                    image.setImage((byte[])row.get(0));
+                    image.setCategory((String)row.get(1));
+                    return image;
+                },Encoders.bean(Image.class)).filter(image->image!=null).toJavaRDD()
+                .map(image-> {
                     INDArray vec;
                     try {
-                        if(row.isNullAt(0) || row.isNullAt(1)) {
-                            System.out.println("Row has a null!");
-                            return null;
-                        }
-                        String label = classifyFolderNames ? null : row.get(1).toString();
+                        String label = classifyFolderNames ? null : image.getCategory();
                         Integer idx = invertedIdxMap.get(label);
-                        if(idx==null || idx<0) {
-                            System.out.println("Invalid label: "+label);
+                        if (idx == null || idx < 0) {
+                            System.out.println("Invalid label: " + label);
                             return null;
                         } else {
                             INDArray labelVec = Nd4j.zeros(numOutputs);
-                            BufferedImage image = ImageIO.read(new ByteArrayInputStream((byte[]) (row.get(0))));
-                            if(image.getHeight()!=height||image.getWidth()!=width) {
-                                image = Scalr.resize(image,Scalr.Method.ULTRA_QUALITY,height,width,Scalr.OP_ANTIALIAS);
+                            BufferedImage jpg = ImageIO.read(new ByteArrayInputStream(image.getImage()));
+                            if (jpg.getHeight() != height || jpg.getWidth() != width) {
+                                jpg = Scalr.resize(jpg, Scalr.Method.ULTRA_QUALITY, height, width, Scalr.OP_ANTIALIAS);
                             }
-                            if(image==null)return null;
-                            vec = ImageVectorizer.vectorizeImage(image, numInputs);
-                            if(vec!=null) {
+                            if (jpg == null) return null;
+                            vec = ImageVectorizer.vectorizeImage(jpg, numInputs);
+                            if (vec != null) {
                                 labelVec.putScalar(idx, 1.0);
                                 return new DataSet(vec, labelVec);
                             }
@@ -74,7 +80,7 @@ public class DataLoader {
                     }
                     return null;
 
-                },Encoders.bean(DataSet.class)).filter(d->d!=null).toJavaRDD();
+                }).filter(d->d!=null);
 
         return data;
     }
