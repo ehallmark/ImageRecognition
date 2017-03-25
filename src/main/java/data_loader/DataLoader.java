@@ -113,7 +113,7 @@ public class DataLoader {
                     }
                     return null;
 
-                }).filter(d->d!=null);
+                }).filter(d->d!=null).repartition(200);
 
         return data;
     }
