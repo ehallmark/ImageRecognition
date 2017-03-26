@@ -64,18 +64,18 @@ public class SparkClassification {
         String fileName = "gs://image-scrape-dump/"+args[0];
         String dataBucketName = "gs://image-scrape-dump/labeled-images/"+args[1];
 
-        int batch = 1;
-        int rows = 32;
-        int cols = 32;
+        int batch = 10;
+        int rows = 15;
+        int cols = 15;
         int channels = 3;
         int numInputs = rows*cols*channels;
-        int nEpochs = 2000;
+        int nEpochs = 2;
 
         List<String> labels = sc.textFile(fileName).map(line->{
             return line.split("[,\\[\\]()]")[0].replaceAll("\\s+"," ").replaceAll("[^a-zA-z0-9- ]", "").trim().toLowerCase();
         }).distinct().collect();
 
-        JavaRDD<DataSet> data = DataLoader.loadClassificationData(spark,rows,cols,channels,labels,false,dataBucketName);
+        JavaRDD<DataSet> data = DataLoader.loadClassificationData(spark,rows,cols,channels,labels,false,batch,dataBucketName);
         int numOutputs = labels.size();
 
         System.out.println("DataList size: "+data.count());
@@ -84,7 +84,7 @@ public class SparkClassification {
         System.out.println("Build model....");
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
                 .seed(69)
-                .iterations(3) // Training iterations as above
+                .iterations(1) // Training iterations as above
                 .miniBatch(true)
                 .regularization(true).l2(0.0005)
                 .learningRate(.01).biasLearningRate(0.02)

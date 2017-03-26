@@ -17,9 +17,8 @@ import scala.Tuple2;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by Evan on 3/21/2017.
@@ -32,7 +31,7 @@ public class DataLoader {
                 .load(bucket);
     }
 
-    public static JavaRDD<DataSet> loadClassificationData(SparkSession spark, int height, int width, int channels, List<String> labels, boolean classifyFolderNames, String... bucketNames) {
+    public static JavaRDD<DataSet> loadClassificationData(SparkSession spark, int height, int width, int channels, List<String> labels, boolean classifyFolderNames, int batchSize, String... bucketNames) {
         Map<String,Integer> invertedIdxMap = new HashMap<>();
         for(int i = 0; i < labels.size(); i++) {
             invertedIdxMap.put(labels.get(i),i);
@@ -80,9 +79,24 @@ public class DataLoader {
                     }
                     return null;
 
-                }).filter(d->d!=null).repartition(200);
-
-        return data;
+                }).filter(d->d!=null);
+        data.cache();
+        long count = data.count();
+        return  data.repartition((int)count/batchSize).mapPartitions(iter->{
+            List<INDArray> labelVecs = new ArrayList<>(batchSize);
+            List<INDArray> featureVecs = new ArrayList<>(batchSize);
+            for(int i = 0; i < batchSize; i++) {
+                if(iter.hasNext()) {
+                    DataSet set = iter.next();
+                    labelVecs.add(set.getLabels());
+                    featureVecs.add(set.getFeatures());
+                } else {
+                    labelVecs.add(Nd4j.zeros(numOutputs));
+                    featureVecs.add(Nd4j.zeros(numInputs));
+                }
+            }
+            return Arrays.asList(new DataSet(Nd4j.vstack(featureVecs),Nd4j.vstack(labelVecs))).iterator();
+        }).repartition(200);
     }
 
     public static JavaRDD<DataSet> loadAutoEncoderData(SparkSession spark, int height, int width, int channels, String... bucketNames) {
