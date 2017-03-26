@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SparkClassification {
     public static void main(String[] args) throws Exception {
         // Spark stuff
-        boolean useSparkLocal = false;
+        boolean useSparkLocal = true;
         SparkConf sparkConf = new SparkConf();
         if (useSparkLocal) {
             sparkConf.setMaster("local[*]");
