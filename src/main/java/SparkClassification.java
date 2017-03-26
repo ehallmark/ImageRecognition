@@ -64,7 +64,7 @@ public class SparkClassification {
         String fileName = "gs://image-scrape-dump/"+args[0];
         String dataBucketName = "gs://image-scrape-dump/labeled-images/"+args[1];
 
-        int batch = 10;
+        int batch = 100;
         int rows = 32;
         int cols = 32;
         int channels = 3;
