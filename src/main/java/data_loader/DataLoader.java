@@ -82,7 +82,8 @@ public class DataLoader {
                 }).filter(d->d!=null);
         data.cache();
         long count = data.count();
-        return  data.repartition((int)count/batchSize).mapPartitions(iter->{
+        System.out.println("Starting count before batching: "+count);
+        data=data.repartition((int)count/batchSize).mapPartitions(iter->{
             List<INDArray> labelVecs = new ArrayList<>(batchSize);
             List<INDArray> featureVecs = new ArrayList<>(batchSize);
             for(int i = 0; i < batchSize; i++) {
@@ -97,6 +98,8 @@ public class DataLoader {
             }
             return Arrays.asList(new DataSet(Nd4j.vstack(featureVecs),Nd4j.vstack(labelVecs))).iterator();
         }).repartition(200);
+        long finalCount = data.map(d->d.numExamples()).reduce((n1,n2)->n1+n2);
+        System.out.println("Final count: "+finalCount);
     }
 
     public static JavaRDD<DataSet> loadAutoEncoderData(SparkSession spark, int height, int width, int channels, String... bucketNames) {
