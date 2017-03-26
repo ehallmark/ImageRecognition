@@ -64,7 +64,7 @@ public class SparkClassification {
         String fileName = "gs://image-scrape-dump/"+args[0];
         String dataBucketName = "gs://image-scrape-dump/labeled-images/"+args[1];
 
-        int batch = 100;
+        int batch = 10;
         int rows = 32;
         int cols = 32;
         int channels = 3;
@@ -114,9 +114,7 @@ public class SparkClassification {
                         .kernelSize(2,2)
                         .stride(2,2)
                         .build())
-                .layer(4, new DenseLayer.Builder().activation(Activation.RELU)
-                        .nOut(numOutputs).build())
-                .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MSE)
+                .layer(4, new OutputLayer.Builder(LossFunctions.LossFunction.MSE)
                         .nOut(numOutputs)
                         .activation(Activation.SIGMOID)
                         .build())
@@ -125,8 +123,8 @@ public class SparkClassification {
 
         //Configuration for Spark training: see http://deeplearning4j.org/spark for explanation of these configuration options
         TrainingMaster tm = new ParameterAveragingTrainingMaster.Builder(batch)    //Each DataSet object: contains (by default) 32 examples
-                .averagingFrequency(5)
-                .workerPrefetchNumBatches(2)            //Async prefetching: 2 examples per worker
+                .averagingFrequency(10)
+                .workerPrefetchNumBatches(1)            //Async prefetching: 2 examples per worker
                 .batchSizePerWorker(batch)
                 .build();
 
