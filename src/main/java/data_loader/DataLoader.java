@@ -8,6 +8,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.storage.StorageLevel;
 import org.imgscalr.Scalr;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
@@ -80,7 +81,7 @@ public class DataLoader {
                     return null;
 
                 }).filter(d->d!=null);
-        data.cache();
+        data.persist(StorageLevel.MEMORY_AND_DISK());
         long count = data.count();
         System.out.println("Starting count before batching: "+count);
         data=data.repartition((int)count/batchSize).mapPartitions(iter->{
@@ -100,6 +101,8 @@ public class DataLoader {
         }).repartition(200);
         long finalCount = data.map(d->d.numExamples()).reduce((n1,n2)->n1+n2);
         System.out.println("Final count: "+finalCount);
+        data.unpersist();
+        return data;
     }
 
     public static JavaRDD<DataSet> loadAutoEncoderData(SparkSession spark, int height, int width, int channels, String... bucketNames) {
