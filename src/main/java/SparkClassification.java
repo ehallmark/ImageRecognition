@@ -22,6 +22,7 @@ import org.deeplearning4j.nn.conf.layers.ConvolutionLayer;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.conf.layers.SubsamplingLayer;
+import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.deeplearning4j.spark.api.TrainingMaster;
@@ -64,9 +65,9 @@ public class SparkClassification {
         String fileName = "gs://image-scrape-dump/"+args[0];
         String dataBucketName = "gs://image-scrape-dump/labeled-images/"+args[1];
 
-        int batch = 10;
-        int rows = 32;
-        int cols = 32;
+        int batch = 50;
+        int rows = 16;
+        int cols = 16;
         int channels = 3;
         int numInputs = rows*cols*channels;
         int nEpochs = 2;
@@ -104,17 +105,7 @@ public class SparkClassification {
                         .kernelSize(2,2)
                         .stride(2,2)
                         .build())
-                .layer(2, new ConvolutionLayer.Builder(5, 5)
-                        //Note that nIn need not be specified in later layers
-                        .stride(1, 1)
-                        .nOut((numInputs+numOutputs+numOutputs+numOutputs)/4)
-                        .activation(Activation.IDENTITY)
-                        .build())
-                .layer(3, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
-                        .kernelSize(2,2)
-                        .stride(2,2)
-                        .build())
-                .layer(4, new OutputLayer.Builder(LossFunctions.LossFunction.MSE)
+                .layer(2, new OutputLayer.Builder(LossFunctions.LossFunction.MSE)
                         .nOut(numOutputs)
                         .activation(Activation.SIGMOID)
                         .build())
@@ -131,7 +122,7 @@ public class SparkClassification {
         //Create the Spark network
         SparkDl4jMultiLayer model = new SparkDl4jMultiLayer(sc, conf, tm);
 
-        ModelRunner.runClassificationModel(model,data,nEpochs);
+        ModelRunner.runClassificationModel(model, data, nEpochs);
 
     }
 }
