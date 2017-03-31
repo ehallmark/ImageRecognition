@@ -61,9 +61,6 @@ public class ModelRunner {
             double overallError = testData.collect().stream().collect(Collectors.averagingDouble(test -> {
                 INDArray latentValues = autoencoder.activate(test.getFeatureMatrix(), false);
                 INDArray reconstruction = autoencoder.generateAtMeanGivenZ(latentValues);
-                System.out.println("Latent Var dimensions: "+latentValues.shapeInfoToString());
-                System.out.println("Input dimensions: "+test.getFeatureMatrix().shapeInfoToString());
-                System.out.println("Reconstruction dimensions: "+reconstruction.shapeInfoToString());
 
                 double error = 0d;
                 for (int r = 0; r < test.getFeatureMatrix().rows(); r++) {
