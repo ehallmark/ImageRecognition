@@ -47,6 +47,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SparkClassification {
     public static void main(String[] args) throws Exception {
         // Spark stuff
+        runModel(args,false);
+    }
+
+
+    public static void runModel(String[] args, boolean classifyFolderNames) {
         boolean useSparkLocal = false;
         SparkConf sparkConf = new SparkConf();
         if (useSparkLocal) {
@@ -61,8 +66,6 @@ public class SparkClassification {
         if(args.length<2) {
             throw new RuntimeException("Must specify filename and databucket name");
         }
-
-        boolean classifyFolderNames = true;
 
         // Algorithm
         String fileName = "gs://image-scrape-dump/"+args[0];
@@ -144,4 +147,5 @@ public class SparkClassification {
         ModelRunner.runClassificationModel(model, data, nEpochs);
 
     }
+
 }
