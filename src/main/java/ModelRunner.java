@@ -8,6 +8,8 @@ import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.ops.transforms.Transforms;
 
+import java.util.stream.Collectors;
+
 /**
  * Created by Evan on 3/25/2017.
  */
@@ -48,16 +50,26 @@ public class ModelRunner {
         System.out.println("Test Count: "+testCount);
         JavaRDD<DataSet> trainData = splitSets[1].repartition(200);
         System.out.println("Train count: "+trainData.count());
+        //Get the variational autoencoder layer
+        org.deeplearning4j.nn.layers.variational.VariationalAutoencoder autoencoder
+                = (org.deeplearning4j.nn.layers.variational.VariationalAutoencoder) model.getNetwork().getLayer(0);
 
         System.out.println("Train model....");
         for( int i=0; i<nEpochs; i++ ) {
             model.fit(trainData);
             System.out.println("*** Completed epoch {"+i+"} ***");
+            double overallError = testData.collect().stream().collect(Collectors.averagingDouble(test -> {
+                INDArray latentValues = autoencoder.activate(test.getFeatureMatrix(), false);
+                INDArray reconstruction = autoencoder.generateAtMeanGivenZ(latentValues);
+                double error = 0d;
+                for (int r = 0; r < test.getFeatureMatrix().rows(); r++) {
+                    error += 1.0 - Transforms.cosineSim(test.getFeatureMatrix().getRow(r), reconstruction.getRow(r));
+                }
+                error /= test.getFeatureMatrix().rows();
+                return error;
+            }));
+            System.out.println("Current model score: "+overallError);
 
-            //Get the variational autoencoder layer
-            org.deeplearning4j.nn.layers.variational.VariationalAutoencoder autoencoder
-                    = (org.deeplearning4j.nn.layers.variational.VariationalAutoencoder) model.getNetwork().getLayer(0);
-            System.out.println("Current model score: "+autoencoder.score());
         }
         System.out.println("****************Model finished********************");
     }
