@@ -64,8 +64,8 @@ public class SparkAutoEncoder {
         // Algorithm
 
         int batch = 1;
-        int rows = 40;
-        int cols = 40;
+        int rows = 16;
+        int cols = 16;
         int channels = 3;
         int numInputs = rows*cols*channels;
         int nEpochs = 2000;
@@ -90,24 +90,24 @@ public class SparkAutoEncoder {
                         .nIn(channels)
                         .stride(1, 1)
                         .nOut(20)
-                        .activation(Activation.IDENTITY)
+                        .activation(Activation.RELU)
                         .build())
                 .layer(1, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
                         .kernelSize(2,2)
                         .stride(2,2)
                         .build())
-                .layer(2, new ConvolutionLayer.Builder(5, 5)
+                .layer(2, new DenseLayer.Builder().activation(Activation.RELU)
+                        .nOut(10).build())
+                .layer(3, new ConvolutionLayer.Builder(5, 5)
                         //Note that nIn need not be specified in later layers
                         .stride(1, 1)
-                        .nOut(50)
-                        .activation(Activation.IDENTITY)
+                        .nOut(20)
+                        .activation(Activation.RELU)
                         .build())
-                .layer(3, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
+                .layer(4, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
                         .kernelSize(2,2)
                         .stride(2,2)
                         .build())
-                .layer(4, new DenseLayer.Builder().activation(Activation.RELU)
-                        .nOut(500).build())
                 .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MSE)
                         .nOut(numInputs)
                         .activation(Activation.SIGMOID)
@@ -117,8 +117,8 @@ public class SparkAutoEncoder {
 
         //Configuration for Spark training: see http://deeplearning4j.org/spark for explanation of these configuration options
         TrainingMaster tm = new ParameterAveragingTrainingMaster.Builder(batch)    //Each DataSet object: contains (by default) 32 examples
-                .averagingFrequency(5)
-                .workerPrefetchNumBatches(2)            //Async prefetching: 2 examples per worker
+                .averagingFrequency(10)
+                .workerPrefetchNumBatches(1)            //Async prefetching: 2 examples per worker
                 .batchSizePerWorker(batch)
                 .build();
 

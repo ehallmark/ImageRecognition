@@ -61,9 +61,15 @@ public class SparkClassification {
         if(args.length<2) {
             throw new RuntimeException("Must specify filename and databucket name");
         }
+
+        boolean classifyFolderNames = true;
+
         // Algorithm
         String fileName = "gs://image-scrape-dump/"+args[0];
-        String dataBucketName = "gs://image-scrape-dump/labeled-images/"+args[1];
+        String[] dataBucketNames = new String[args.length-1];
+        for(int i = 1; i < args.length; i++) {
+            dataBucketNames[i]="gs://image-scrape-dump/labeled-images/"+args[i];
+        }
 
         int batch = 50;
         int rows = 16;
@@ -76,7 +82,7 @@ public class SparkClassification {
             return line.split("[,\\[\\]()]")[0].replaceAll("\\s+"," ").replaceAll("[^a-zA-z0-9- ]", "").trim().toLowerCase();
         }).distinct().collect();
 
-        JavaRDD<DataSet> data = DataLoader.loadClassificationData(spark,rows,cols,channels,labels,false,batch,dataBucketName);
+        JavaRDD<DataSet> data = DataLoader.loadClassificationData(spark,rows,cols,channels,labels,classifyFolderNames,batch,dataBucketNames);
         int numOutputs = labels.size();
 
         System.out.println("DataList size: "+data.count());
@@ -88,7 +94,7 @@ public class SparkClassification {
                 .iterations(1) // Training iterations as above
                 .miniBatch(true)
                 .regularization(true).l2(0.0005)
-                .learningRate(.01).biasLearningRate(0.02)
+                .learningRate(.005)
                 .learningRateDecayPolicy(LearningRatePolicy.Inverse).lrPolicyDecayRate(0.001).lrPolicyPower(0.75)
                 .weightInit(WeightInit.XAVIER)
                 .optimizationAlgo(OptimizationAlgorithm.LINE_GRADIENT_DESCENT)
@@ -98,14 +104,27 @@ public class SparkClassification {
                         //nIn and nOut specify depth. nIn here is the nChannels and nOut is the number of filters to be applied
                         .nIn(channels)
                         .stride(1, 1)
-                        .nOut((numInputs+numOutputs)/2)
-                        .activation(Activation.IDENTITY)
+                        .nOut(20)
+                        .activation(Activation.RELU)
                         .build())
                 .layer(1, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
                         .kernelSize(2,2)
                         .stride(2,2)
                         .build())
-                .layer(2, new OutputLayer.Builder(LossFunctions.LossFunction.MSE)
+                .layer(2, new ConvolutionLayer.Builder(5, 5)
+                        //nIn and nOut specify depth. nIn here is the nChannels and nOut is the number of filters to be applied
+                        .stride(1, 1)
+                        .nOut(20)
+                        .activation(Activation.RELU)
+                        .build())
+                .layer(3, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
+                        .kernelSize(2,2)
+                        .stride(2,2)
+                        .build())
+                .layer(4, new DenseLayer.Builder().activation(Activation.RELU)
+                        .nOut((numInputs+numOutputs)/2).build())
+                .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MSE)
+                        .nIn((numInputs+numOutputs)/2)
                         .nOut(numOutputs)
                         .activation(Activation.SIGMOID)
                         .build())

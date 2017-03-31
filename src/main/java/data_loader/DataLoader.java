@@ -39,48 +39,61 @@ public class DataLoader {
         }
         int numInputs = height*width*channels;
         int numOutputs = labels.size();
-        JavaRDD<DataSet> data = spark.read()
-                .format(FlickrScraper.AVRO_FORMAT)
-                .load(bucketNames)
-                .select("image","category")
-                .map(row->{
-                    if(row.isNullAt(0) || row.isNullAt(1)) {
-                        System.out.println("Row has a null!");
-                        return null;
-                    }
-                    Image image = new Image();
-                    image.setImage((byte[])row.get(0));
-                    image.setCategory((String)row.get(1));
-                    return image;
-                },Encoders.bean(Image.class)).filter(image->image!=null).toJavaRDD()
-                .map(image-> {
-                    INDArray vec;
-                    try {
-                        String label = classifyFolderNames ? null : image.getCategory();
-                        Integer idx = invertedIdxMap.get(label);
-                        if (idx == null || idx < 0) {
-                            System.out.println("Invalid label: " + label);
-                            return null;
-                        } else {
-                            INDArray labelVec = Nd4j.zeros(numOutputs);
-                            BufferedImage jpg = ImageIO.read(new ByteArrayInputStream(image.getImage()));
-                            if (jpg.getHeight() != height || jpg.getWidth() != width) {
-                                jpg = Scalr.resize(jpg, Scalr.Method.QUALITY, height, width, Scalr.OP_ANTIALIAS);
-                            }
-                            if (jpg == null) return null;
-                            vec = ImageVectorizer.vectorizeImage(jpg, numInputs);
-                            if (vec != null) {
-                                labelVec.putScalar(idx, 1.0);
-                                return new DataSet(vec, labelVec);
-                            }
-                        }
+        List<JavaRDD<DataSet>> dataList = new ArrayList<>(bucketNames.length);
+        Arrays.stream(bucketNames).forEach(filename-> {
+                    JavaRDD<DataSet> data = spark.read()
+                            .format(FlickrScraper.AVRO_FORMAT)
+                            .load(filename)
+                            .select("image", "category")
+                            .map(row -> {
+                                if (row.isNullAt(0) || row.isNullAt(1)) {
+                                    System.out.println("Row has a null!");
+                                    return null;
+                                }
+                                Image image = new Image();
+                                image.setImage((byte[]) row.get(0));
+                                image.setCategory((String) row.get(1));
+                                return image;
+                            }, Encoders.bean(Image.class)).filter(image -> image != null).toJavaRDD()
+                            .map(image -> {
+                                INDArray vec;
+                                try {
+                                    String label = classifyFolderNames ? filename : image.getCategory();
+                                    Integer idx = invertedIdxMap.get(label);
+                                    if (idx == null || idx < 0) {
+                                        System.out.println("Invalid label: " + label);
+                                        return null;
+                                    } else {
+                                        INDArray labelVec = Nd4j.zeros(numOutputs);
+                                        BufferedImage jpg = ImageIO.read(new ByteArrayInputStream(image.getImage()));
+                                        if (jpg.getHeight() != height || jpg.getWidth() != width) {
+                                            jpg = Scalr.resize(jpg, Scalr.Method.QUALITY, height, width, Scalr.OP_ANTIALIAS);
+                                        }
+                                        if (jpg == null) return null;
+                                        vec = ImageVectorizer.vectorizeImage(jpg, numInputs);
+                                        if (vec != null) {
+                                            labelVec.putScalar(idx, 1.0);
+                                            return new DataSet(vec, labelVec);
+                                        }
+                                    }
 
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                    return null;
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                                return null;
 
-                }).filter(d->d!=null);
+                            }).filter(d -> d != null);
+                    dataList.add(data);
+                });
+
+        if(dataList.isEmpty()) return null;
+
+        System.out.println("Taking union of datasets...");
+        JavaRDD<DataSet> data = dataList.get(0);
+        for(int i = 1; i < dataList.size(); i++) {
+            data=data.union(dataList.get(i));
+            System.out.println("Finished union: "+i);
+        }
         data.persist(StorageLevel.MEMORY_AND_DISK());
         long count = data.count();
         System.out.println("Starting count before batching: "+count);
