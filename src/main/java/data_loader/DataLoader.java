@@ -94,10 +94,16 @@ public class DataLoader {
             data=data.union(dataList.get(i));
             System.out.println("Finished union: "+i);
         }
+
+        return batchBy(data,batchSize,numInputs,numOutputs);
+    }
+
+    private static JavaRDD<DataSet> batchBy(JavaRDD<DataSet> data, int batchSize, int numInputs, int numOutputs) {
         data.persist(StorageLevel.MEMORY_AND_DISK());
         long count = data.count();
         System.out.println("Starting count before batching: "+count);
-        data=data.repartition((int)count/batchSize).mapPartitions(iter->{
+
+        JavaRDD<DataSet> toReturn = data.repartition((int)count/batchSize).mapPartitions(iter->{
             List<INDArray> labelVecs = new ArrayList<>(batchSize);
             List<INDArray> featureVecs = new ArrayList<>(batchSize);
             for(int i = 0; i < batchSize; i++) {
@@ -112,13 +118,11 @@ public class DataLoader {
             }
             return Arrays.asList(new DataSet(Nd4j.vstack(featureVecs),Nd4j.vstack(labelVecs))).iterator();
         }).repartition(200);
-        long finalCount = data.map(d->d.numExamples()).reduce((n1,n2)->n1+n2);
-        System.out.println("Final count: "+finalCount);
         data.unpersist();
-        return data;
+        return toReturn;
     }
 
-    public static JavaRDD<DataSet> loadAutoEncoderData(SparkSession spark, int height, int width, int channels, String... bucketNames) {
+    public static JavaRDD<DataSet> loadAutoEncoderData(SparkSession spark, int height, int width, int channels, int batch, String... bucketNames) {
         int numInputs = height*width*channels;
         JavaRDD<DataSet> data = spark.read()
                 .format(FlickrScraper.AVRO_FORMAT)
@@ -148,6 +152,6 @@ public class DataLoader {
 
                 }).filter(d->d!=null).repartition(200);
 
-        return data;
+        return batchBy(data,batch,numInputs,numInputs);
     }
 }

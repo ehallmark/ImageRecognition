@@ -63,7 +63,7 @@ public class SparkAutoEncoder {
 
         // Algorithm
 
-        int batch = 1;
+        int batch = 50;
         int rows = 16;
         int cols = 16;
         int channels = 3;
@@ -71,7 +71,7 @@ public class SparkAutoEncoder {
         int nEpochs = 2000;
 
         String dataBucketName = "gs://image-scrape-dump/labeled-images/"+args[0];
-        JavaRDD<DataSet> data = DataLoader.loadAutoEncoderData(spark,rows,cols,channels,dataBucketName);
+        JavaRDD<DataSet> data = DataLoader.loadAutoEncoderData(spark,rows,cols,channels,batch,dataBucketName);
 
         System.out.println("Build model....");
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
