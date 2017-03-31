@@ -90,7 +90,7 @@ public class SparkAutoEncoder {
                         .nIn(numInputs)                       //Input size: 28x28
                         .nOut(vectorSize)                            //Size of the latent variable space: p(z|x). 2 dimensions here for plotting, use more in general
                         .build())
-                .pretrain(true).backprop(true).build();
+                .pretrain(true).backprop(false).build();
 
 
         //Configuration for Spark training: see http://deeplearning4j.org/spark for explanation of these configuration options
