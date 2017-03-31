@@ -11,15 +11,9 @@ import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.SparkSession;
 import org.deeplearning4j.nn.api.OptimizationAlgorithm;
-import org.deeplearning4j.nn.conf.LearningRatePolicy;
-import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
-import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
-import org.deeplearning4j.nn.conf.Updater;
+import org.deeplearning4j.nn.conf.*;
 import org.deeplearning4j.nn.conf.inputs.InputType;
-import org.deeplearning4j.nn.conf.layers.ConvolutionLayer;
-import org.deeplearning4j.nn.conf.layers.DenseLayer;
-import org.deeplearning4j.nn.conf.layers.OutputLayer;
-import org.deeplearning4j.nn.conf.layers.SubsamplingLayer;
+import org.deeplearning4j.nn.conf.layers.*;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.deeplearning4j.spark.api.TrainingMaster;
@@ -63,12 +57,14 @@ public class SparkAutoEncoder {
 
         // Algorithm
 
-        int batch = 50;
-        int rows = 16;
-        int cols = 16;
+        int batch = 10;
+        int rows = 28;
+        int cols = 28;
         int channels = 3;
         int numInputs = rows*cols*channels;
-        int nEpochs = 2000;
+        int nEpochs = 20;
+
+        int vectorSize = 20;
 
         String dataBucketName = "gs://image-scrape-dump/labeled-images/"+args[0];
         JavaRDD<DataSet> data = DataLoader.loadAutoEncoderData(spark,rows,cols,channels,batch,dataBucketName);
@@ -78,46 +74,54 @@ public class SparkAutoEncoder {
                 .seed(69)
                 .iterations(3) // Training iterations as above
                 .miniBatch(true)
-                .regularization(true).l2(0.0005)
-                .learningRate(.01).biasLearningRate(0.02)
+                .gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue)
+                .gradientNormalizationThreshold(1.0)
+                .learningRate(.01)
                 .learningRateDecayPolicy(LearningRatePolicy.Inverse).lrPolicyDecayRate(0.001).lrPolicyPower(0.75)
                 .weightInit(WeightInit.XAVIER)
                 .optimizationAlgo(OptimizationAlgorithm.LINE_GRADIENT_DESCENT)
                 .updater(Updater.NESTEROVS).momentum(0.9)
                 .list()
-                .layer(0, new ConvolutionLayer.Builder(5, 5)
-                        //nIn and nOut specify depth. nIn here is the nChannels and nOut is the number of filters to be applied
-                        .nIn(channels)
-                        .stride(1, 1)
-                        .nOut(20)
+                .layer(0, new AutoEncoder.Builder()
+                        .lossFunction(LossFunctions.LossFunction.MCXENT)
                         .activation(Activation.RELU)
+                        .nIn(numInputs)
+                        .nOut((numInputs*3)/4)
                         .build())
-                .layer(1, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
-                        .kernelSize(2,2)
-                        .stride(2,2)
-                        .build())
-                .layer(2, new DenseLayer.Builder().activation(Activation.RELU)
-                        .nOut(10).build())
-                .layer(3, new ConvolutionLayer.Builder(5, 5)
-                        //Note that nIn need not be specified in later layers
-                        .stride(1, 1)
-                        .nOut(20)
+                .layer(1, new AutoEncoder.Builder()
+                        .lossFunction(LossFunctions.LossFunction.MCXENT)
                         .activation(Activation.RELU)
+                        .nIn((numInputs*3)/4)
+                        .nOut(vectorSize*2)
                         .build())
-                .layer(4, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
-                        .kernelSize(2,2)
-                        .stride(2,2)
+                .layer(2, new AutoEncoder.Builder()
+                        .lossFunction(LossFunctions.LossFunction.MCXENT)
+                        .activation(Activation.RELU)
+                        .nIn(vectorSize*2)
+                        .nOut(vectorSize)
+                        .build())
+                .layer(3, new AutoEncoder.Builder()
+                        .lossFunction(LossFunctions.LossFunction.MCXENT)
+                        .activation(Activation.RELU)
+                        .nIn(vectorSize)
+                        .nOut(vectorSize*2)
+                        .build())
+                .layer(4, new AutoEncoder.Builder()
+                        .lossFunction(LossFunctions.LossFunction.MCXENT)
+                        .activation(Activation.RELU)
+                        .nIn(numInputs)
+                        .nOut((numInputs*3)/4)
                         .build())
                 .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MSE)
+                        .nIn((numInputs*3)/4)
                         .nOut(numInputs)
                         .activation(Activation.SIGMOID)
                         .build())
-                .setInputType(InputType.convolutionalFlat(rows,cols,channels)) //See note below
-                .backprop(true).pretrain(false).build();
+                .backprop(true).pretrain(true).build();
 
         //Configuration for Spark training: see http://deeplearning4j.org/spark for explanation of these configuration options
         TrainingMaster tm = new ParameterAveragingTrainingMaster.Builder(batch)    //Each DataSet object: contains (by default) 32 examples
-                .averagingFrequency(10)
+                .averagingFrequency(5)
                 .workerPrefetchNumBatches(1)            //Async prefetching: 2 examples per worker
                 .batchSizePerWorker(batch)
                 .build();
