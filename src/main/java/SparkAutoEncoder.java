@@ -14,6 +14,9 @@ import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.*;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.*;
+import org.deeplearning4j.nn.conf.layers.variational.BernoulliReconstructionDistribution;
+import org.deeplearning4j.nn.conf.layers.variational.CompositeReconstructionDistribution;
+import org.deeplearning4j.nn.conf.layers.variational.VariationalAutoencoder;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
 import org.deeplearning4j.spark.api.TrainingMaster;
@@ -72,52 +75,21 @@ public class SparkAutoEncoder {
         System.out.println("Build model....");
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
                 .seed(69)
-                .iterations(3) // Training iterations as above
-                .miniBatch(true)
-                .gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue)
-                .gradientNormalizationThreshold(1.0)
-                .learningRate(.01)
-                .learningRateDecayPolicy(LearningRatePolicy.Inverse).lrPolicyDecayRate(0.001).lrPolicyPower(0.75)
+                .iterations(1).optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
+                .learningRate(1e-2)
+                .updater(Updater.RMSPROP).rmsDecay(0.95)
                 .weightInit(WeightInit.XAVIER)
-                .optimizationAlgo(OptimizationAlgorithm.LINE_GRADIENT_DESCENT)
-                .updater(Updater.NESTEROVS).momentum(0.9)
+                .regularization(true).l2(1e-4)
                 .list()
-                .layer(0, new AutoEncoder.Builder()
-                        .lossFunction(LossFunctions.LossFunction.MCXENT)
-                        .activation(Activation.RELU)
-                        .nIn(numInputs)
-                        .nOut((numInputs*3)/4)
+                .layer(0, new VariationalAutoencoder.Builder()
+                        .activation(Activation.LEAKYRELU)
+                        .encoderLayerSizes(256, 256)        //2 encoder layers, each of size 256
+                        .decoderLayerSizes(256, 256)        //2 decoder layers, each of size 256
+                        .reconstructionDistribution(new BernoulliReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
+                        .nIn(numInputs)                       //Input size: 28x28
+                        .nOut(vectorSize)                            //Size of the latent variable space: p(z|x). 2 dimensions here for plotting, use more in general
                         .build())
-                .layer(1, new AutoEncoder.Builder()
-                        .lossFunction(LossFunctions.LossFunction.MCXENT)
-                        .activation(Activation.RELU)
-                        .nIn((numInputs*3)/4)
-                        .nOut(vectorSize*2)
-                        .build())
-                .layer(2, new AutoEncoder.Builder()
-                        .lossFunction(LossFunctions.LossFunction.MCXENT)
-                        .activation(Activation.RELU)
-                        .nIn(vectorSize*2)
-                        .nOut(vectorSize)
-                        .build())
-                .layer(3, new AutoEncoder.Builder()
-                        .lossFunction(LossFunctions.LossFunction.MCXENT)
-                        .activation(Activation.RELU)
-                        .nIn(vectorSize)
-                        .nOut(vectorSize*2)
-                        .build())
-                .layer(4, new AutoEncoder.Builder()
-                        .lossFunction(LossFunctions.LossFunction.MCXENT)
-                        .activation(Activation.RELU)
-                        .nIn(vectorSize*2)
-                        .nOut((numInputs*3)/4)
-                        .build())
-                .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MSE)
-                        .nIn((numInputs*3)/4)
-                        .nOut(numInputs)
-                        .activation(Activation.SIGMOID)
-                        .build())
-                .backprop(true).pretrain(true).build();
+                .pretrain(true).backprop(false).build();
 
         //Configuration for Spark training: see http://deeplearning4j.org/spark for explanation of these configuration options
         TrainingMaster tm = new ParameterAveragingTrainingMaster.Builder(batch)    //Each DataSet object: contains (by default) 32 examples
