@@ -54,18 +54,10 @@ public class ModelRunner {
             model.fit(trainData);
             System.out.println("*** Completed epoch {"+i+"} ***");
 
-            System.out.println("Evaluate model....");
-            double totalError = data.collect().stream().map(ds->{
-                INDArray output = model.getNetwork().output(ds.getFeatureMatrix(), false);
-                double error = 0;
-                for(int r = 0; r < output.rows(); r++) {
-                    double sim = Transforms.cosineSim(output.getRow(r),ds.getFeatureMatrix().getRow(r));
-                    if(new Double(sim).isNaN()) error+= 2.0;
-                    else error+= 1.0-sim;
-                }
-                return error;
-            }).reduce((a,b)->a+b).get();
-            System.out.println("Average Error: "+totalError/testCount);
+            //Get the variational autoencoder layer
+            org.deeplearning4j.nn.layers.variational.VariationalAutoencoder autoencoder
+                    = (org.deeplearning4j.nn.layers.variational.VariationalAutoencoder) model.getNetwork().getLayer(0);
+            System.out.println("Current model score: "+autoencoder.score());
         }
         System.out.println("****************Model finished********************");
     }

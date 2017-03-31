@@ -82,14 +82,16 @@ public class SparkAutoEncoder {
                 .regularization(true).l2(1e-4)
                 .list()
                 .layer(0, new VariationalAutoencoder.Builder()
-                        .activation(Activation.LEAKYRELU)
+                        .activation(Activation.SIGMOID)
+                        .pzxActivationFunction(Activation.IDENTITY)
                         .encoderLayerSizes(256, 256)        //2 encoder layers, each of size 256
                         .decoderLayerSizes(256, 256)        //2 decoder layers, each of size 256
                         .reconstructionDistribution(new BernoulliReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
                         .nIn(numInputs)                       //Input size: 28x28
                         .nOut(vectorSize)                            //Size of the latent variable space: p(z|x). 2 dimensions here for plotting, use more in general
                         .build())
-                .pretrain(true).backprop(false).build();
+                .pretrain(true).backprop(true).build();
+
 
         //Configuration for Spark training: see http://deeplearning4j.org/spark for explanation of these configuration options
         TrainingMaster tm = new ParameterAveragingTrainingMaster.Builder(batch)    //Each DataSet object: contains (by default) 32 examples
@@ -100,6 +102,7 @@ public class SparkAutoEncoder {
 
         //Create the Spark network
         SparkDl4jMultiLayer model = new SparkDl4jMultiLayer(sc, conf, tm);
+
         ModelRunner.runAutoEncoderModel(model,data,nEpochs);
 
     }
