@@ -109,7 +109,7 @@ public class SparkAutoEncoder {
                 .layer(4, new AutoEncoder.Builder()
                         .lossFunction(LossFunctions.LossFunction.MCXENT)
                         .activation(Activation.RELU)
-                        .nIn(numInputs)
+                        .nIn(vectorSize*2)
                         .nOut((numInputs*3)/4)
                         .build())
                 .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.MSE)
