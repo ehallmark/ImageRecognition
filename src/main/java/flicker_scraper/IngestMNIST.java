@@ -25,7 +25,7 @@ public class IngestMNIST {
         final int seed = 69;
         boolean useSparkLocal = false;
         //int numPartitions = 150;
-
+        boolean binarize = false;
         SparkConf sparkConf = new SparkConf();
 
         if (useSparkLocal) {
@@ -37,8 +37,8 @@ public class IngestMNIST {
                 .config(sparkConf)
                 .getOrCreate();
 
-        MnistDataSetIterator train = new MnistDataSetIterator(1,60000,true,true,true,seed);
-        MnistDataSetIterator test = new MnistDataSetIterator(1,10000,true,false,true,seed);
+        MnistDataSetIterator train = new MnistDataSetIterator(1,60000,binarize,true,true,seed);
+        MnistDataSetIterator test = new MnistDataSetIterator(1,10000,binarize,false,true,seed);
         saveToBucket(train,"mnist-train",spark);
         saveToBucket(test,"mnist-test",spark);
     }
@@ -57,6 +57,7 @@ public class IngestMNIST {
         System.out.println("Num datasets: "+data.size());
         spark.createDataset(data, Encoders.bean(FeatureLabelPair.class))
                 .write()
+                .mode(SaveMode.Overwrite)
                 .format(FlickrScraper.AVRO_FORMAT)
                 .save(FlickrScraper.LABELED_IMAGES_BUCKET+bucketName);
     }
