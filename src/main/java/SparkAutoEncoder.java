@@ -16,6 +16,7 @@ import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.*;
 import org.deeplearning4j.nn.conf.layers.variational.BernoulliReconstructionDistribution;
 import org.deeplearning4j.nn.conf.layers.variational.CompositeReconstructionDistribution;
+import org.deeplearning4j.nn.conf.layers.variational.GaussianReconstructionDistribution;
 import org.deeplearning4j.nn.conf.layers.variational.VariationalAutoencoder;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
@@ -61,13 +62,13 @@ public class SparkAutoEncoder {
         // Algorithm
 
         int batch = 10;
-        int rows = 28;
-        int cols = 28;
+        int rows = 75;
+        int cols = 75;
         int channels = 3;
         int numInputs = rows*cols*channels;
         int nEpochs = 20;
 
-        int vectorSize = 20;
+        int vectorSize = 200;
 
         String dataBucketName = "gs://image-scrape-dump/labeled-images/"+args[0];
         JavaRDD<DataSet> data = DataLoader.loadAutoEncoderData(spark,rows,cols,channels,batch,dataBucketName);
@@ -84,9 +85,9 @@ public class SparkAutoEncoder {
                 .layer(0, new VariationalAutoencoder.Builder()
                         .activation(Activation.SIGMOID)
                         .pzxActivationFunction(Activation.IDENTITY)
-                        .encoderLayerSizes(256, 256)        //2 encoder layers, each of size 256
-                        .decoderLayerSizes(256, 256)        //2 decoder layers, each of size 256
-                        .reconstructionDistribution(new BernoulliReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
+                        .encoderLayerSizes(500, 500, 500, 500)
+                        .decoderLayerSizes(500, 500, 500, 500)
+                        .reconstructionDistribution(new GaussianReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
                         .nIn(numInputs)                       //Input size: 28x28
                         .nOut(vectorSize)                            //Size of the latent variable space: p(z|x). 2 dimensions here for plotting, use more in general
                         .build())
