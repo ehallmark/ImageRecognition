@@ -57,7 +57,7 @@ public class ModelRunner {
 
     public static void runAutoEncoderModel(SparkDl4jMultiLayer model, JavaRDD<DataSet> trainData, JavaRDD<DataSet> testData, int nEpochs) {
         //Execute training:
-        model.setListeners(new ScoreIterationListener(1));
+        //model.setListeners(new ScoreIterationListener(1));
         //Get the variational autoencoder layer
         org.deeplearning4j.nn.layers.variational.VariationalAutoencoder autoencoder
                 = (org.deeplearning4j.nn.layers.variational.VariationalAutoencoder) model.getNetwork().getLayer(0);

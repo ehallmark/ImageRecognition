@@ -41,12 +41,11 @@ public class MNISTAutoEncoderExample {
         int cols = 28;
         int channels = 1;
         int numInputs = rows*cols*channels;
-        int numOutputs = 10; // Number of digits
         int nEpochs = 100;
         int vectorSize = 50;
 
-        JavaRDD<DataSet> data = IngestMNIST.getTrainAutoEncoderData(spark,batch,numInputs,numOutputs);
-        JavaRDD<DataSet> test = IngestMNIST.getTestAutoEncoderData(spark,batch,numInputs,numOutputs);
+        JavaRDD<DataSet> data = IngestMNIST.getTrainAutoEncoderData(spark,batch,numInputs);
+        JavaRDD<DataSet> test = IngestMNIST.getTestAutoEncoderData(spark,batch,numInputs);
 
         System.out.println("DataList size: "+data.count());
 
