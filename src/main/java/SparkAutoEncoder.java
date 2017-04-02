@@ -89,6 +89,7 @@ public class SparkAutoEncoder {
                         .activation(Activation.RELU)
                         .pzxActivationFunction(Activation.RELU)
                         .dropOut(0.5)
+                        .lossFunction(LossFunctions.LossFunction.RECONSTRUCTION_CROSSENTROPY)
                         .encoderLayerSizes(1000, 750, 500)
                         .decoderLayerSizes(500, 750, 1000)
                         .reconstructionDistribution(new BernoulliReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
