@@ -41,34 +41,18 @@ public class MNISTExample {
                 .appName("FlickrScraper")
                 .getOrCreate();
 
-        if(args.length<2) {
-            throw new RuntimeException("Must specify filename and databucket name");
-        }
-
-        // Algorithm
-        String fileName = "gs://image-scrape-dump/"+args[0];
-        String[] dataBucketNames = new String[args.length-1];
-        for(int i = 1; i < args.length; i++) {
-            dataBucketNames[i-1]="gs://image-scrape-dump/labeled-images/"+args[i];
-        }
-
         int batch = 1;
         int rows = 28;
         int cols = 28;
         int channels = 1;
         int numInputs = rows*cols*channels;
+        int numOutputs = 10; // Number of digits
         int nEpochs = 100;
-
-        List<String> labels = sc.textFile(fileName).map(line->{
-            return line.split("[,\\[\\]()]")[0].replaceAll("\\s+"," ").replaceAll("[^a-zA-z0-9- ]", "").trim().toLowerCase();
-        }).distinct().collect();
 
         JavaRDD<DataSet> data = IngestMNIST.getTrainData(spark);
         JavaRDD<DataSet> test = IngestMNIST.getTestData(spark);
-        int numOutputs = labels.size();
 
         System.out.println("DataList size: "+data.count());
-        System.out.println("Labels size: "+labels.size());
 
         System.out.println("Build model....");
         MultiLayerConfiguration conf = new NeuralNetConfiguration.Builder()
