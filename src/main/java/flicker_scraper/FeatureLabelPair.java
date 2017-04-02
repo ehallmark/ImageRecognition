@@ -10,20 +10,15 @@ import java.io.Serializable;
 public class FeatureLabelPair implements Serializable {
     private static final long serialVersionUID = 69L;
 
-    private INDArray features;
-    private INDArray labels;
+    private float[] features;
+    private float[] labels;
 
     public FeatureLabelPair() {
 
     }
-    
-    public FeatureLabelPair(INDArray features, INDArray labels) {
-        this.features=features;
-        this.labels=labels;
-    }
 
-    public INDArray getFeatures() {return features;}
-    public INDArray getLabels() { return labels; }
-    public void setFeatures(INDArray features) { this.features=features;}
-    public void setLabels(INDArray labels) {this.labels=labels;}
+    public float[] getFeatures() {return features;}
+    public float[] getLabels() { return labels; }
+    public void setFeatures(float[] features) { this.features=features;}
+    public void setLabels(float[] labels) {this.labels=labels;}
 }
