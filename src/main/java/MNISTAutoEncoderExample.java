@@ -10,6 +10,7 @@ import org.deeplearning4j.nn.conf.GradientNormalization;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.Updater;
+import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.conf.layers.variational.BernoulliReconstructionDistribution;
 import org.deeplearning4j.nn.conf.layers.variational.GaussianReconstructionDistribution;
@@ -44,8 +45,9 @@ public class MNISTAutoEncoderExample {
         int channels = 1;
         int numInputs = rows*cols*channels;
         int nEpochs = 100;
-        int vectorSize = 50;
+        int vectorSize = 100;
         int nLabels = 10;
+        int hiddenLayerSize = 50;
 
         JavaRDD<DataSet> data = IngestMNIST.getTrainData(spark,batch,numInputs,nLabels);
         JavaRDD<DataSet> test = IngestMNIST.getTestData(spark,batch,numInputs,nLabels);
@@ -68,14 +70,19 @@ public class MNISTAutoEncoderExample {
                         .activation(Activation.LEAKYRELU)
                         .pzxActivationFunction(Activation.IDENTITY)
                         //.dropOut(0.5)
-                        .encoderLayerSizes(300,300)
-                        .decoderLayerSizes(300,300)
+                        .encoderLayerSizes(500,300,300)
+                        .decoderLayerSizes(300,300,500)
                         .reconstructionDistribution(new BernoulliReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
                         .nIn(numInputs)                       //Input size: 28x28
                         .nOut(vectorSize)                            //Size of the latent variable space: p(z|x). 2 dimensions here for plotting, use more in general
                         .build())
-                .layer(1, new OutputLayer.Builder()
+                .layer(1, new DenseLayer.Builder()
                         .nIn(vectorSize)
+                        .nOut(hiddenLayerSize)
+                        .activation(Activation.RELU)
+                        .build())
+                .layer(2, new OutputLayer.Builder()
+                        .nIn(hiddenLayerSize)
                         .nOut(nLabels)
                         .activation(Activation.SOFTMAX)
                         .lossFunction(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
