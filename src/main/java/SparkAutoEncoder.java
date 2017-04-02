@@ -83,15 +83,13 @@ public class SparkAutoEncoder {
                 .weightInit(WeightInit.XAVIER)
                 .regularization(true).l2(1e-4)
                 .miniBatch(true)
-                .gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue)
-                .gradientNormalizationThreshold(1.0)
                 .list()
                 .layer(0, new VariationalAutoencoder.Builder()
                         .activation(Activation.LEAKYRELU)
                         .pzxActivationFunction(Activation.IDENTITY)
-                        .dropOut(0.5)
-                        .encoderLayerSizes(1000, 750, 500)
-                        .decoderLayerSizes(500, 750, 1000)
+                        //.dropOut(0.5)
+                        .encoderLayerSizes(1000, 1000)
+                        .decoderLayerSizes(1000, 1000)
                         .reconstructionDistribution(new BernoulliReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
                         .nIn(numInputs)                       //Input size: 28x28
                         .nOut(vectorSize)                            //Size of the latent variable space: p(z|x). 2 dimensions here for plotting, use more in general
