@@ -14,16 +14,7 @@ import java.util.stream.Collectors;
  * Created by Evan on 3/25/2017.
  */
 public class ModelRunner {
-    public static void runClassificationModel(SparkDl4jMultiLayer model, JavaRDD<DataSet> data, int nEpochs) {
-        //Execute training:
-        System.out.println("Splitting data...");
-        JavaRDD<DataSet>[] splitSets = data.randomSplit(new double[]{0.25,0.75});
-        JavaRDD<DataSet> testData = splitSets[0].repartition(200);
-        long testCount = testData.count();
-        System.out.println("Test Count: "+testCount);
-        JavaRDD<DataSet> trainData = splitSets[1].repartition(200);
-        System.out.println("Train count: "+trainData.count());
-
+    public static void runClassificationModel(SparkDl4jMultiLayer model, JavaRDD<DataSet> trainData, JavaRDD<DataSet> testData, int nEpochs) {
         System.out.println("Train model....");
         model.setListeners(new ScoreIterationListener(1));
         for( int i=0; i<nEpochs; i++ ) {
@@ -38,6 +29,18 @@ public class ModelRunner {
             System.out.println(evaluation.stats());
         }
         System.out.println("****************Model finished********************");
+    }
+
+    public static void runClassificationModel(SparkDl4jMultiLayer model, JavaRDD<DataSet> data, int nEpochs) {
+        //Execute training:
+        System.out.println("Splitting data...");
+        JavaRDD<DataSet>[] splitSets = data.randomSplit(new double[]{0.25,0.75});
+        JavaRDD<DataSet> testData = splitSets[0].repartition(200);
+        long testCount = testData.count();
+        System.out.println("Test Count: "+testCount);
+        JavaRDD<DataSet> trainData = splitSets[1].repartition(200);
+        System.out.println("Train count: "+trainData.count());
+        runClassificationModel(model,trainData,testData,nEpochs);
     }
 
     public static void runAutoEncoderModel(SparkDl4jMultiLayer model, JavaRDD<DataSet> data, int nEpochs) {
