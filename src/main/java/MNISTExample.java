@@ -52,7 +52,7 @@ public class MNISTExample {
             dataBucketNames[i-1]="gs://image-scrape-dump/labeled-images/"+args[i];
         }
 
-        int batch = 5;
+        int batch = 1;
         int rows = 28;
         int cols = 28;
         int channels = 1;
