@@ -98,7 +98,7 @@ public class DataLoader {
         return batchBy(data,batchSize,numInputs,numOutputs);
     }
 
-    private static JavaRDD<DataSet> batchBy(JavaRDD<DataSet> data, int batchSize, int numInputs, int numOutputs) {
+    public static JavaRDD<DataSet> batchBy(JavaRDD<DataSet> data, int batchSize, int numInputs, int numOutputs) {
         data.persist(StorageLevel.MEMORY_AND_DISK());
         long count = data.count();
         System.out.println("Starting count before batching: "+count);

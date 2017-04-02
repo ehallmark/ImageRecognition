@@ -1,16 +1,20 @@
 package main.java.flicker_scraper;
 
+import main.java.data_loader.DataLoader;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.TypedColumn;
+import org.apache.spark.storage.StorageLevel;
 import org.deeplearning4j.datasets.iterator.impl.MnistDataSetIterator;
+import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.factory.Nd4j;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -57,22 +61,23 @@ public class IngestMNIST {
                 .save(FlickrScraper.LABELED_IMAGES_BUCKET+bucketName);
     }
 
-    private static JavaRDD<DataSet> getData(String bucket, SparkSession spark) {
-        return spark.read()
+    private static JavaRDD<DataSet> getData(String bucket, SparkSession spark, int batch, int nInputs, int nOutputs) {
+        return DataLoader.batchBy(spark.read()
                 .format(FlickrScraper.AVRO_FORMAT)
                 .load(FlickrScraper.LABELED_IMAGES_BUCKET+bucket)
                 .as(Encoders.bean(FeatureLabelPair.class))
                 .toJavaRDD().repartition(100)
                 .map(pair->{
                     return new DataSet(Nd4j.create(pair.getFeatures()), Nd4j.create(pair.getLabels()));
-                });
+                }),batch,nInputs,nOutputs);
     }
 
-    public static JavaRDD<DataSet> getTrainData(SparkSession spark) {
-        return getData("mnist-train",spark);
+    public static JavaRDD<DataSet> getTrainData(SparkSession spark, int batch, int nInputs, int nOutputs) {
+        return getData("mnist-train",spark,batch,nInputs,nOutputs);
     }
 
-    public static JavaRDD<DataSet> getTestData(SparkSession spark) {
-        return getData("mnist-test",spark);
+    public static JavaRDD<DataSet> getTestData(SparkSession spark, int batch, int nInputs, int nOutputs) {
+        return getData("mnist-test",spark,batch,nInputs,nOutputs);
     }
+
 }

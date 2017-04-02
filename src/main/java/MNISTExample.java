@@ -41,7 +41,7 @@ public class MNISTExample {
                 .appName("FlickrScraper")
                 .getOrCreate();
 
-        int batch = 1;
+        int batch = 100;
         int rows = 28;
         int cols = 28;
         int channels = 1;
@@ -49,8 +49,8 @@ public class MNISTExample {
         int numOutputs = 10; // Number of digits
         int nEpochs = 100;
 
-        JavaRDD<DataSet> data = IngestMNIST.getTrainData(spark);
-        JavaRDD<DataSet> test = IngestMNIST.getTestData(spark);
+        JavaRDD<DataSet> data = IngestMNIST.getTrainData(spark,batch,numInputs,numOutputs);
+        JavaRDD<DataSet> test = IngestMNIST.getTestData(spark,batch,numInputs,numOutputs);
 
         System.out.println("DataList size: "+data.count());
 
