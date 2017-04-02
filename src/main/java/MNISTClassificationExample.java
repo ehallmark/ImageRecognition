@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * Created by Evan on 4/2/2017.
  */
-public class MNISTExample {
+public class MNISTClassificationExample {
     public static void main(String[] args) {
         boolean useSparkLocal = false;
         SparkConf sparkConf = new SparkConf();

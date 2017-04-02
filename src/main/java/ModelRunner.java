@@ -45,7 +45,6 @@ public class ModelRunner {
 
     public static void runAutoEncoderModel(SparkDl4jMultiLayer model, JavaRDD<DataSet> data, int nEpochs) {
         //Execute training:
-        model.setListeners(new ScoreIterationListener(1));
         System.out.println("Splitting data...");
         JavaRDD<DataSet>[] splitSets = data.randomSplit(new double[]{0.25,0.75});
         JavaRDD<DataSet> testData = splitSets[0].repartition(200);
@@ -53,6 +52,12 @@ public class ModelRunner {
         System.out.println("Test Count: "+testCount);
         JavaRDD<DataSet> trainData = splitSets[1].repartition(200);
         System.out.println("Train count: "+trainData.count());
+        runAutoEncoderModel(model,trainData,testData,nEpochs);
+    }
+
+    public static void runAutoEncoderModel(SparkDl4jMultiLayer model, JavaRDD<DataSet> trainData, JavaRDD<DataSet> testData, int nEpochs) {
+        //Execute training:
+        model.setListeners(new ScoreIterationListener(1));
         //Get the variational autoencoder layer
         org.deeplearning4j.nn.layers.variational.VariationalAutoencoder autoencoder
                 = (org.deeplearning4j.nn.layers.variational.VariationalAutoencoder) model.getNetwork().getLayer(0);

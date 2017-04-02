@@ -72,12 +72,30 @@ public class IngestMNIST {
                 }),batch,nInputs,nOutputs);
     }
 
+    private static JavaRDD<DataSet> getAutoEncoderData(String bucket, SparkSession spark, int batch, int nInputs, int nOutputs) {
+        return DataLoader.batchBy(spark.read()
+                .format(FlickrScraper.AVRO_FORMAT)
+                .load(FlickrScraper.LABELED_IMAGES_BUCKET+bucket)
+                .as(Encoders.bean(FeatureLabelPair.class))
+                .toJavaRDD().repartition(100)
+                .map(pair->{
+                    return new DataSet(Nd4j.create(pair.getFeatures()), Nd4j.create(pair.getFeatures()));
+                }),batch,nInputs,nOutputs);    }
+
     public static JavaRDD<DataSet> getTrainData(SparkSession spark, int batch, int nInputs, int nOutputs) {
         return getData("mnist-train",spark,batch,nInputs,nOutputs);
     }
 
     public static JavaRDD<DataSet> getTestData(SparkSession spark, int batch, int nInputs, int nOutputs) {
         return getData("mnist-test",spark,batch,nInputs,nOutputs);
+    }
+
+    public static JavaRDD<DataSet> getTrainAutoEncoderData(SparkSession spark, int batch, int nInputs, int nOutputs) {
+        return getAutoEncoderData("mnist-train",spark,batch,nInputs,nOutputs);
+    }
+
+    public static JavaRDD<DataSet> getTestAutoEncoderData(SparkSession spark, int batch, int nInputs, int nOutputs) {
+        return getAutoEncoderData("mnist-test",spark,batch,nInputs,nOutputs);
     }
 
 }
