@@ -68,7 +68,7 @@ public class SparkAutoEncoder {
         int numInputs = rows*cols*channels;
         int nEpochs = 20;
 
-        int vectorSize = 200;
+        int vectorSize = 300;
 
         String dataBucketName = "gs://image-scrape-dump/labeled-images/"+args[0];
         JavaRDD<DataSet> data = DataLoader.loadAutoEncoderData(spark,rows,cols,channels,batch,dataBucketName);
@@ -81,13 +81,17 @@ public class SparkAutoEncoder {
                 .updater(Updater.RMSPROP).rmsDecay(0.95)
                 .weightInit(WeightInit.XAVIER)
                 .regularization(true).l2(1e-4)
+                .miniBatch(true)
+                .gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue)
+                .gradientNormalizationThreshold(1.0)
                 .list()
                 .layer(0, new VariationalAutoencoder.Builder()
-                        .activation(Activation.SIGMOID)
-                        .pzxActivationFunction(Activation.IDENTITY)
-                        .encoderLayerSizes(500, 500, 500, 500)
-                        .decoderLayerSizes(500, 500, 500, 500)
-                        .reconstructionDistribution(new GaussianReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
+                        .activation(Activation.RELU)
+                        .pzxActivationFunction(Activation.RELU)
+                        .dropOut(0.5)
+                        .encoderLayerSizes(1000, 750, 500)
+                        .decoderLayerSizes(500, 750, 1000)
+                        .reconstructionDistribution(new BernoulliReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
                         .nIn(numInputs)                       //Input size: 28x28
                         .nOut(vectorSize)                            //Size of the latent variable space: p(z|x). 2 dimensions here for plotting, use more in general
                         .build())
