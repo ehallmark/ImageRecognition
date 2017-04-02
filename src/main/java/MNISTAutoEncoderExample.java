@@ -10,6 +10,7 @@ import org.deeplearning4j.nn.conf.GradientNormalization;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.Updater;
+import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.conf.layers.variational.BernoulliReconstructionDistribution;
 import org.deeplearning4j.nn.conf.layers.variational.GaussianReconstructionDistribution;
 import org.deeplearning4j.nn.conf.layers.variational.VariationalAutoencoder;
@@ -19,6 +20,7 @@ import org.deeplearning4j.spark.impl.multilayer.SparkDl4jMultiLayer;
 import org.deeplearning4j.spark.impl.paramavg.ParameterAveragingTrainingMaster;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.dataset.DataSet;
+import org.nd4j.linalg.lossfunctions.LossFunctions;
 
 /**
  * Created by Evan on 4/2/2017.
@@ -43,9 +45,10 @@ public class MNISTAutoEncoderExample {
         int numInputs = rows*cols*channels;
         int nEpochs = 100;
         int vectorSize = 50;
+        int nLabels = 10;
 
-        JavaRDD<DataSet> data = IngestMNIST.getTrainAutoEncoderData(spark,batch,numInputs);
-        JavaRDD<DataSet> test = IngestMNIST.getTestAutoEncoderData(spark,batch,numInputs);
+        JavaRDD<DataSet> data = IngestMNIST.getTrainData(spark,batch,numInputs,nLabels);
+        JavaRDD<DataSet> test = IngestMNIST.getTestData(spark,batch,numInputs,nLabels);
 
         System.out.println("DataList size: "+data.count());
 
@@ -65,13 +68,19 @@ public class MNISTAutoEncoderExample {
                         .activation(Activation.LEAKYRELU)
                         .pzxActivationFunction(Activation.IDENTITY)
                         //.dropOut(0.5)
-                        .encoderLayerSizes(200,200,200)
-                        .decoderLayerSizes(200,200,200)
+                        .encoderLayerSizes(200,200)
+                        .decoderLayerSizes(200,200)
                         .reconstructionDistribution(new GaussianReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
                         .nIn(numInputs)                       //Input size: 28x28
                         .nOut(vectorSize)                            //Size of the latent variable space: p(z|x). 2 dimensions here for plotting, use more in general
                         .build())
-                .pretrain(true).backprop(false).build();
+                .layer(1, new OutputLayer.Builder()
+                        .nIn(vectorSize)
+                        .nOut(nLabels)
+                        .activation(Activation.SOFTMAX)
+                        .lossFunction(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
+                        .build())
+                .pretrain(true).backprop(true).build();
 
         //Configuration for Spark training: see http://deeplearning4j.org/spark for explanation of these configuration options
         TrainingMaster tm = new ParameterAveragingTrainingMaster.Builder(batch)    //Each DataSet object: contains (by default) 32 examples
@@ -83,7 +92,7 @@ public class MNISTAutoEncoderExample {
         //Create the Spark network
         SparkDl4jMultiLayer model = new SparkDl4jMultiLayer(sc, conf, tm);
 
-        ModelRunner.runAutoEncoderModel(model,data,test,nEpochs);
+        ModelRunner.runClassificationModel(model,data,test,nEpochs);
 
     }
 }
