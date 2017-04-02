@@ -62,7 +62,7 @@ public class IngestMNIST {
                 .format(FlickrScraper.AVRO_FORMAT)
                 .load(FlickrScraper.LABELED_IMAGES_BUCKET+bucket)
                 .as(Encoders.bean(FeatureLabelPair.class))
-                .toJavaRDD()
+                .toJavaRDD().repartition(100)
                 .map(pair->{
                     return new DataSet(Nd4j.create(pair.getFeatures()), Nd4j.create(pair.getLabels()));
                 });
