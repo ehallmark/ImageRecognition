@@ -69,7 +69,7 @@ public class SparkAutoEncoder {
         int numInputs = rows*cols*channels;
         int nEpochs = 20;
 
-        int vectorSize = 30;
+        int vectorSize = 300;
 
         String dataBucketName = "gs://image-scrape-dump/labeled-images/"+args[0];
         JavaRDD<DataSet> data = DataLoader.loadAutoEncoderData(spark,rows,cols,channels,batch,dataBucketName);
@@ -82,14 +82,16 @@ public class SparkAutoEncoder {
                 .updater(Updater.RMSPROP).rmsDecay(0.95)
                 .weightInit(WeightInit.XAVIER)
                 .regularization(true).l2(1e-4)
+                .gradientNormalizationThreshold(1.0)
+                .gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue)
                 .miniBatch(true)
                 .list()
                 .layer(0, new VariationalAutoencoder.Builder()
                         .activation(Activation.SIGMOID)
                         .pzxActivationFunction(Activation.IDENTITY)
-                        //.dropOut(0.5)
-                        .encoderLayerSizes(255)
-                        .decoderLayerSizes(255)
+                        .dropOut(0.5)
+                        .encoderLayerSizes(1000,1000)
+                        .decoderLayerSizes(1000,1000)
                         .reconstructionDistribution(new BernoulliReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
                         .nIn(numInputs)                       //Input size: 28x28
                         .nOut(vectorSize)                            //Size of the latent variable space: p(z|x). 2 dimensions here for plotting, use more in general
