@@ -42,8 +42,11 @@ public class IngestMNIST {
         List<FeatureLabelPair> data = new ArrayList<>();
         while(iter.hasNext()) {
             DataSet dataSet = iter.next();
+            if(dataSet==null) continue;
             data.add(new FeatureLabelPair(dataSet.getFeatureMatrix(),dataSet.getLabels()));
         }
+        System.out.println("Info for: "+bucketName);
+        System.out.println("Num datasets: "+data.size());
         spark.createDataset(data, Encoders.bean(FeatureLabelPair.class))
                 .write()
                 .format(FlickrScraper.AVRO_FORMAT)
@@ -61,7 +64,7 @@ public class IngestMNIST {
                     return new DataSet(pair.getFeatures(),pair.getLabels());
                 });
     }
-    
+
     public static JavaRDD<DataSet> getTrainData(SparkSession spark) {
         return getData("mnist-train",spark);
     }
