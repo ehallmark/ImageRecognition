@@ -20,6 +20,7 @@ import org.deeplearning4j.nn.conf.layers.variational.GaussianReconstructionDistr
 import org.deeplearning4j.nn.conf.layers.variational.VariationalAutoencoder;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
+import org.deeplearning4j.spark.api.Repartition;
 import org.deeplearning4j.spark.api.TrainingMaster;
 import org.deeplearning4j.spark.impl.multilayer.SparkDl4jMultiLayer;
 import org.deeplearning4j.spark.impl.paramavg.ParameterAveragingTrainingMaster;
@@ -86,10 +87,9 @@ public class SparkAutoEncoder {
                 .gradientNormalizationThreshold(1.0)
                 .list()
                 .layer(0, new VariationalAutoencoder.Builder()
-                        .activation(Activation.RELU)
-                        .pzxActivationFunction(Activation.RELU)
+                        .activation(Activation.LEAKYRELU)
+                        .pzxActivationFunction(Activation.IDENTITY)
                         .dropOut(0.5)
-                        .lossFunction(LossFunctions.LossFunction.RECONSTRUCTION_CROSSENTROPY)
                         .encoderLayerSizes(1000, 750, 500)
                         .decoderLayerSizes(500, 750, 1000)
                         .reconstructionDistribution(new BernoulliReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
