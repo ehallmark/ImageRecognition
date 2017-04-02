@@ -12,6 +12,11 @@ public class FeatureLabelPair implements Serializable {
 
     private INDArray features;
     private INDArray labels;
+
+    public FeatureLabelPair() {
+
+    }
+    
     public FeatureLabelPair(INDArray features, INDArray labels) {
         this.features=features;
         this.labels=labels;

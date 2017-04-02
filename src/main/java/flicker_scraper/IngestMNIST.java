@@ -32,8 +32,8 @@ public class IngestMNIST {
                 .config(sparkConf)
                 .getOrCreate();
 
-        MnistDataSetIterator train = new MnistDataSetIterator(50,60000,false,true,true,seed);
-        MnistDataSetIterator test = new MnistDataSetIterator(50,10000,false,false,true,seed);
+        MnistDataSetIterator train = new MnistDataSetIterator(50,60000,true,true,true,seed);
+        MnistDataSetIterator test = new MnistDataSetIterator(50,10000,true,false,true,seed);
         saveToBucket(train,"mnist-train",spark);
         saveToBucket(test,"mnist-test",spark);
     }
