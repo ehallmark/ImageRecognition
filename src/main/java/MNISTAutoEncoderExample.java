@@ -81,7 +81,7 @@ public class MNISTAutoEncoderExample {
                         .stride(2,2)
                         .build())
                 .layer(2, new DenseLayer.Builder()
-                        .nOut(500)
+                        .nOut(200)
                         .activation(Activation.RELU)
                         .build())
                 .layer(3, new VariationalAutoencoder.Builder()
