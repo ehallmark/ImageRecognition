@@ -10,8 +10,11 @@ import org.deeplearning4j.nn.conf.GradientNormalization;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
 import org.deeplearning4j.nn.conf.Updater;
+import org.deeplearning4j.nn.conf.inputs.InputType;
+import org.deeplearning4j.nn.conf.layers.ConvolutionLayer;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
+import org.deeplearning4j.nn.conf.layers.SubsamplingLayer;
 import org.deeplearning4j.nn.conf.layers.variational.BernoulliReconstructionDistribution;
 import org.deeplearning4j.nn.conf.layers.variational.GaussianReconstructionDistribution;
 import org.deeplearning4j.nn.conf.layers.variational.VariationalAutoencoder;
@@ -47,7 +50,7 @@ public class MNISTAutoEncoderExample {
         int nEpochs = 100;
         int vectorSize = 100;
         int nLabels = 10;
-        int hiddenLayerSize = 50;
+        int hiddenLayerSize = 100;
 
         JavaRDD<DataSet> data = IngestMNIST.getTrainData(spark,batch,numInputs,nLabels);
         JavaRDD<DataSet> test = IngestMNIST.getTestData(spark,batch,numInputs,nLabels);
@@ -66,27 +69,43 @@ public class MNISTAutoEncoderExample {
                 .gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue)
                 .miniBatch(true)
                 .list()
-                .layer(0, new VariationalAutoencoder.Builder()
+                .layer(0, new ConvolutionLayer.Builder(5, 5)
+                        //nIn and nOut specify depth. nIn here is the nChannels and nOut is the number of filters to be applied
+                        .nIn(channels)
+                        .stride(1, 1)
+                        .nOut(20)
+                        .activation(Activation.RELU)
+                        .build())
+                .layer(1, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
+                        .kernelSize(2,2)
+                        .stride(2,2)
+                        .build())
+                .layer(2, new DenseLayer.Builder()
+                        .nOut(500)
+                        .activation(Activation.RELU)
+                        .build())
+                .layer(3, new VariationalAutoencoder.Builder()
                         .activation(Activation.LEAKYRELU)
                         .pzxActivationFunction(Activation.IDENTITY)
                         //.dropOut(0.5)
-                        .encoderLayerSizes(500,300,300)
-                        .decoderLayerSizes(300,300,500)
+                        .encoderLayerSizes(200,200,200)
+                        .decoderLayerSizes(200,200,200)
                         .reconstructionDistribution(new BernoulliReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
                         .nIn(numInputs)                       //Input size: 28x28
                         .nOut(vectorSize)                            //Size of the latent variable space: p(z|x). 2 dimensions here for plotting, use more in general
                         .build())
-                .layer(1, new DenseLayer.Builder()
+                .layer(4, new DenseLayer.Builder()
                         .nIn(vectorSize)
                         .nOut(hiddenLayerSize)
                         .activation(Activation.RELU)
                         .build())
-                .layer(2, new OutputLayer.Builder()
+                .layer(5, new OutputLayer.Builder()
                         .nIn(hiddenLayerSize)
                         .nOut(nLabels)
                         .activation(Activation.SOFTMAX)
                         .lossFunction(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
                         .build())
+                .setInputType(InputType.convolutionalFlat(rows,cols,channels)) //See note below
                 .pretrain(true).backprop(true).build();
 
         //Configuration for Spark training: see http://deeplearning4j.org/spark for explanation of these configuration options
