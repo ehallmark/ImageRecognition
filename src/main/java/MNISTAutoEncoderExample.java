@@ -48,9 +48,9 @@ public class MNISTAutoEncoderExample {
         int channels = 1;
         int numInputs = rows*cols*channels;
         int nEpochs = 100;
-        int vectorSize = 100;
+        int vectorSize = 150;
         int nLabels = 10;
-        int hiddenLayerSize = 50;
+        int hiddenLayerSize = 100;
 
         JavaRDD<DataSet> data = IngestMNIST.getTrainData(spark,batch,numInputs,nLabels);
         JavaRDD<DataSet> test = IngestMNIST.getTestData(spark,batch,numInputs,nLabels);
@@ -65,15 +65,15 @@ public class MNISTAutoEncoderExample {
                 .updater(Updater.RMSPROP).rmsDecay(0.95)
                 .weightInit(WeightInit.XAVIER)
                 .regularization(true).l2(1e-4)
-                .gradientNormalizationThreshold(1.0)
-                .gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue)
+                //.gradientNormalizationThreshold(1.0)
+                //.gradientNormalization(GradientNormalization.ClipElementWiseAbsoluteValue)
                 .miniBatch(true)
                 .list()
-                .layer(0, new ConvolutionLayer.Builder(5, 5)
+                .layer(0, new ConvolutionLayer.Builder(7, 7)
                         //nIn and nOut specify depth. nIn here is the nChannels and nOut is the number of filters to be applied
                         .nIn(channels)
-                        .stride(3, 3)
-                        .nOut(50)
+                        .stride(4, 4)
+                        .nOut(100)
                         .activation(Activation.RELU)
                         .build())
                 .layer(1, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
@@ -81,22 +81,24 @@ public class MNISTAutoEncoderExample {
                         .stride(2,2)
                         .build())
                 .layer(2, new DenseLayer.Builder()
-                        .nOut(300)
+                        .nOut(500)
+                        .dropOut(0.5)
                         .activation(Activation.RELU)
                         .build())
                 .layer(3, new VariationalAutoencoder.Builder()
                         .activation(Activation.LEAKYRELU)
                         .pzxActivationFunction(Activation.IDENTITY)
                         //.dropOut(0.5)
-                        .encoderLayerSizes(200,200)
-                        .decoderLayerSizes(200,200)
+                        .encoderLayerSizes(300,300,300)
+                        .decoderLayerSizes(300,300,300)
                         .reconstructionDistribution(new BernoulliReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
-                        .nIn(300)                       //Input size: 28x28
+                        .nIn(500)                       //Input size: 28x28
                         .nOut(vectorSize)                            //Size of the latent variable space: p(z|x). 2 dimensions here for plotting, use more in general
                         .build())
                 .layer(4, new DenseLayer.Builder()
                         .nIn(vectorSize)
                         .nOut(hiddenLayerSize)
+                        .dropOut(0.5)
                         .activation(Activation.RELU)
                         .build())
                 .layer(5, new OutputLayer.Builder()
@@ -111,7 +113,7 @@ public class MNISTAutoEncoderExample {
         //Configuration for Spark training: see http://deeplearning4j.org/spark for explanation of these configuration options
         TrainingMaster tm = new ParameterAveragingTrainingMaster.Builder(batch)    //Each DataSet object: contains (by default) 32 examples
                 .averagingFrequency(5)
-                .workerPrefetchNumBatches(1)            //Async prefetching: 2 examples per worker
+                .workerPrefetchNumBatches(2)            //Async prefetching: 2 examples per worker
                 .batchSizePerWorker(batch)
                 .build();
 
