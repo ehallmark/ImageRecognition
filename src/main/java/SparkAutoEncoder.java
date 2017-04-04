@@ -63,13 +63,13 @@ public class SparkAutoEncoder {
         // Algorithm
 
         int batch = 5;
-        int rows = 75;
-        int cols = 75;
+        int rows = 32;
+        int cols = 32;
         int channels = 3;
         int numInputs = rows*cols*channels;
         int nEpochs = 100;
 
-        int vectorSize = 500;
+        int vectorSize = 300;
 
         String dataBucketName = "gs://image-scrape-dump/labeled-images/"+args[0];
         JavaRDD<DataSet> data = DataLoader.loadAutoEncoderData(spark,rows,cols,channels,batch,dataBucketName);
@@ -90,8 +90,8 @@ public class SparkAutoEncoder {
                         .activation(Activation.LEAKYRELU)
                         .pzxActivationFunction(Activation.IDENTITY)
                         .dropOut(0.5)
-                        .encoderLayerSizes(5000,3000,1000,1000,1000)
-                        .decoderLayerSizes(1000,1000,1000,3000,5000)
+                        .encoderLayerSizes(3000,1000,1000,1000)
+                        .decoderLayerSizes(1000,1000,1000,3000)
                         .reconstructionDistribution(new BernoulliReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
                         .nIn(numInputs)                       //Input size: 28x28
                         .nOut(vectorSize)                            //Size of the latent variable space: p(z|x). 2 dimensions here for plotting, use more in general
@@ -101,7 +101,7 @@ public class SparkAutoEncoder {
 
         //Configuration for Spark training: see http://deeplearning4j.org/spark for explanation of these configuration options
         TrainingMaster tm = new ParameterAveragingTrainingMaster.Builder(batch)    //Each DataSet object: contains (by default) 32 examples
-                .averagingFrequency(10)
+                .averagingFrequency(5)
                 .workerPrefetchNumBatches(-1)            //Async prefetching: 2 examples per worker
                 .batchSizePerWorker(batch)
                 .build();
