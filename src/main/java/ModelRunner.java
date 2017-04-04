@@ -17,6 +17,7 @@ public class ModelRunner {
     public static void runClassificationModel(SparkDl4jMultiLayer model, JavaRDD<DataSet> trainData, JavaRDD<DataSet> testData, int nEpochs) {
         System.out.println("Train model....");
         model.setListeners(new ScoreIterationListener(1));
+        double bestAccuracySoFar = 0d;
         for( int i=0; i<nEpochs; i++ ) {
             model.fit(trainData);
             System.out.println("*** Completed epoch {"+i+"} ***");
@@ -27,6 +28,8 @@ public class ModelRunner {
             Evaluation evaluation = model.evaluate(testData);
             System.out.println("***** Evaluation *****");
             System.out.println(evaluation.stats());
+            if(evaluation.accuracy()>bestAccuracySoFar)bestAccuracySoFar=evaluation.accuracy();
+            System.out.println("Best Accuracy So Far: "+bestAccuracySoFar);
         }
         System.out.println("****************Model finished********************");
     }
