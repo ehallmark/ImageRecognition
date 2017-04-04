@@ -50,7 +50,7 @@ public class MNISTAutoEncoderExample {
         int nEpochs = 100;
         int vectorSize = 100;
         int nLabels = 10;
-        int hiddenLayerSize = 100;
+        int hiddenLayerSize = 50;
 
         JavaRDD<DataSet> data = IngestMNIST.getTrainData(spark,batch,numInputs,nLabels);
         JavaRDD<DataSet> test = IngestMNIST.getTestData(spark,batch,numInputs,nLabels);
@@ -72,26 +72,26 @@ public class MNISTAutoEncoderExample {
                 .layer(0, new ConvolutionLayer.Builder(5, 5)
                         //nIn and nOut specify depth. nIn here is the nChannels and nOut is the number of filters to be applied
                         .nIn(channels)
-                        .stride(1, 1)
-                        .nOut(20)
+                        .stride(3, 3)
+                        .nOut(50)
                         .activation(Activation.RELU)
                         .build())
                 .layer(1, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
                         .kernelSize(2,2)
-                        .stride(2,2)
+                        .stride(3,3)
                         .build())
                 .layer(2, new DenseLayer.Builder()
-                        .nOut(200)
+                        .nOut(300)
                         .activation(Activation.RELU)
                         .build())
                 .layer(3, new VariationalAutoencoder.Builder()
                         .activation(Activation.LEAKYRELU)
                         .pzxActivationFunction(Activation.IDENTITY)
                         //.dropOut(0.5)
-                        .encoderLayerSizes(200,200,200)
-                        .decoderLayerSizes(200,200,200)
+                        .encoderLayerSizes(200,200)
+                        .decoderLayerSizes(200,200)
                         .reconstructionDistribution(new BernoulliReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
-                        .nIn(numInputs)                       //Input size: 28x28
+                        .nIn(300)                       //Input size: 28x28
                         .nOut(vectorSize)                            //Size of the latent variable space: p(z|x). 2 dimensions here for plotting, use more in general
                         .build())
                 .layer(4, new DenseLayer.Builder()
