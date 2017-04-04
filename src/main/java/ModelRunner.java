@@ -68,6 +68,7 @@ public class ModelRunner {
         System.out.println("Train model....");
         for( int i=0; i<nEpochs; i++ ) {
             model.fit(trainData);
+            double bestErrorSoFar = 2.0d;
             System.out.println("*** Completed epoch {"+i+"} ***");
             double overallError = testData.collect().stream().collect(Collectors.averagingDouble(test -> {
                 INDArray latentValues = autoencoder.activate(test.getFeatureMatrix(), false);
@@ -82,7 +83,9 @@ public class ModelRunner {
                 error /= test.getFeatureMatrix().rows();
                 return error;
             }));
-            System.out.println("Current model score: "+overallError);
+            System.out.println("Current model error: "+overallError);
+            if(overallError<bestErrorSoFar)bestErrorSoFar=overallError;
+            System.out.println("Best Error So Far: "+bestErrorSoFar);
 
         }
         System.out.println("****************Model finished********************");
