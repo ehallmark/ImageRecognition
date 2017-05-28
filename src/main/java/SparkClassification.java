@@ -85,6 +85,9 @@ public class SparkClassification {
         }).distinct().collect();
 
         JavaRDD<DataSet> data = DataLoader.loadClassificationData(spark,rows,cols,channels,labels,classifyFolderNames,batch,dataBucketNames);
+        if(data==null) {
+            throw new RuntimeException("Unable to find data. Data is null");
+        }
         int numOutputs = labels.size();
 
         System.out.println("DataList size: "+data.count());

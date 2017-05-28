@@ -69,6 +69,7 @@ public class DataLoader {
                                     } else {
                                         INDArray labelVec = Nd4j.zeros(numOutputs);
                                         BufferedImage jpg = ImageIO.read(new ByteArrayInputStream(image.getImage()));
+                                        if(jpg==null) return null;
                                         if (jpg.getHeight() != height || jpg.getWidth() != width) {
                                             jpg = Scalr.resize(jpg, Scalr.Method.QUALITY, height, width, Scalr.OP_ANTIALIAS);
                                         }
