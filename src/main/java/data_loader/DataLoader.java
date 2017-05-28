@@ -4,6 +4,7 @@ import main.java.flicker_scraper.FlickrScraper;
 import main.java.flicker_scraper.Image;
 import main.java.image_vectorization.ImageVectorizer;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
@@ -13,6 +14,7 @@ import org.imgscalr.Scalr;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.DataSet;
 import org.nd4j.linalg.factory.Nd4j;
+import scala.Function1;
 import scala.Tuple2;
 
 import javax.imageio.ImageIO;
@@ -33,7 +35,7 @@ public class DataLoader {
     }
 
     public static JavaRDD<DataSet> loadClassificationData(SparkSession spark, int height, int width, int channels, List<String> labels, boolean classifyFolderNames, int batchSize, String... bucketNames) {
-       /* Map<String,Integer> invertedIdxMap = new HashMap<>();
+        Map<String,Integer> invertedIdxMap = new HashMap<>();
         for(int i = 0; i < labels.size(); i++) {
             invertedIdxMap.put(labels.get(i),i);
         }
@@ -45,6 +47,7 @@ public class DataLoader {
                             .format(FlickrScraper.AVRO_FORMAT)
                             .load(filename)
                             .select("image", "category")
+                            .toJavaRDD()
                             .map(row -> {
                                 if (row.isNullAt(0) || row.isNullAt(1)) {
                                     System.out.println("Row has a null!");
@@ -54,7 +57,7 @@ public class DataLoader {
                                 image.setImage((byte[]) row.get(0));
                                 image.setCategory((String) row.get(1));
                                 return image;
-                            }, Encoders.bean(Image.class)).filter(image -> image != null).toJavaRDD()
+                            }).filter(image -> image != null)
                             .map(image -> {
                                 INDArray vec;
                                 try {
@@ -70,7 +73,7 @@ public class DataLoader {
                                             jpg = Scalr.resize(jpg, Scalr.Method.QUALITY, height, width, Scalr.OP_ANTIALIAS);
                                         }
                                         if (jpg == null) return null;
-                                        vec = ImageVectorizer.vectorizeImage(jpg, numInputs);
+                                        vec = ImageVectorizer.vectorizeImage(jpg, numInputs, channels==1?true:false);
                                         if (vec != null) {
                                             labelVec.putScalar(idx, 1.0);
                                             return new DataSet(vec, labelVec);
@@ -93,7 +96,7 @@ public class DataLoader {
         for(int i = 1; i < dataList.size(); i++) {
             data=data.union(dataList.get(i));
             System.out.println("Finished union: "+i);
-        }*/
+        }
 
         return null;//batchBy(data,batchSize,numInputs,numOutputs);
     }

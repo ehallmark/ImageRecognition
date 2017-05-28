@@ -74,11 +74,10 @@ public class SparkClassification {
             dataBucketNames[i-1]="gs://image-scrape-dump/labeled-images/"+args[i];
         }
 
-        int batch = 5;
+        int batch = 10;
         int rows = 28;
         int cols = 28;
-        int channels = 3;
-        int numInputs = rows*cols*channels;
+        int channels = 1;
         int nEpochs = 20;
 
         List<String> labels = sc.textFile(fileName).map(line->{
@@ -133,7 +132,7 @@ public class SparkClassification {
 
         //Configuration for Spark training: see http://deeplearning4j.org/spark for explanation of these configuration options
         TrainingMaster tm = new ParameterAveragingTrainingMaster.Builder(batch)    //Each DataSet object: contains (by default) 32 examples
-                .averagingFrequency(5)
+                .averagingFrequency(10)
                 .workerPrefetchNumBatches(1)            //Async prefetching: 2 examples per worker
                 .batchSizePerWorker(batch)
                 .build();
