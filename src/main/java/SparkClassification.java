@@ -22,6 +22,8 @@ import org.deeplearning4j.nn.conf.layers.ConvolutionLayer;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.conf.layers.SubsamplingLayer;
+import org.deeplearning4j.nn.conf.layers.variational.BernoulliReconstructionDistribution;
+import org.deeplearning4j.nn.conf.layers.variational.VariationalAutoencoder;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
@@ -75,10 +77,10 @@ public class SparkClassification {
         }
 
         int batch = 10;
-        int rows = 28;
-        int cols = 28;
+        int rows = 22;
+        int cols = 22;
         int channels = 1;
-        int nEpochs = 20;
+        int nEpochs = 30;
 
         List<String> labels = sc.textFile(fileName).map(line->{
             return line.split("[,\\[\\]()]")[0].replaceAll("\\s+"," ").replaceAll("[^a-zA-z0-9- ]", "").trim().toLowerCase();
@@ -89,8 +91,9 @@ public class SparkClassification {
             throw new RuntimeException("Unable to find data. Data is null");
         }
         int numOutputs = labels.size();
+        int hiddenLayerSize = 100;
 
-        System.out.println("DataList size: "+data.count());
+        //System.out.println("DataList size: "+data.count());
         System.out.println("Labels size: "+labels.size());
 
         System.out.println("Build model....");
@@ -99,44 +102,58 @@ public class SparkClassification {
                 .iterations(1) // Training iterations as above
                 .miniBatch(true)
                 .regularization(true).l2(0.0005)
-                .learningRate(.005)
-                .learningRateDecayPolicy(LearningRatePolicy.Inverse).lrPolicyDecayRate(0.001).lrPolicyPower(0.75)
+                .learningRate(.001)
                 .weightInit(WeightInit.XAVIER)
-                .optimizationAlgo(OptimizationAlgorithm.LINE_GRADIENT_DESCENT)
+                .optimizationAlgo(OptimizationAlgorithm.STOCHASTIC_GRADIENT_DESCENT)
                 .updater(Updater.NESTEROVS).momentum(0.9)
                 .list()
                 .layer(0, new ConvolutionLayer.Builder(5, 5)
                         //nIn and nOut specify depth. nIn here is the nChannels and nOut is the number of filters to be applied
                         .nIn(channels)
-                        .stride(1, 1)
-                        .nOut(20)
+                        .stride(3, 3)
+                        .nOut(50)
                         .activation(Activation.RELU)
                         .build())
                 .layer(1, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
-                        .kernelSize(2,2)
+                        .kernelSize(3,3)
                         .stride(2,2)
                         .build())
-                .layer(2, new ConvolutionLayer.Builder(5, 5)
+                .layer(2, new ConvolutionLayer.Builder(4, 4)
                         //nIn and nOut specify depth. nIn here is the nChannels and nOut is the number of filters to be applied
-                        .stride(1, 1)
-                        .nOut(20)
+                        .stride(2, 2)
+                        .nOut(40)
                         .activation(Activation.RELU)
                         .build())
                 .layer(3, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
-                        .kernelSize(2,2)
+                        .kernelSize(3,3)
                         .stride(2,2)
                         .build())
-                .layer(4, new OutputLayer.Builder(LossFunctions.LossFunction.MSE)
+                .layer(2, new DenseLayer.Builder()
+                        .nOut(hiddenLayerSize*4)
+                        .activation(Activation.RELU)
+                        .build())
+                .layer(4, new VariationalAutoencoder.Builder()
+                        .activation(Activation.LEAKYRELU)
+                        .pzxActivationFunction(Activation.IDENTITY)
+                        //.dropOut(0.5)
+                        .encoderLayerSizes(hiddenLayerSize*2,hiddenLayerSize*2)
+                        .decoderLayerSizes(hiddenLayerSize*2,hiddenLayerSize*2)
+                        .reconstructionDistribution(new BernoulliReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
+                        .nIn(hiddenLayerSize*4)                       //Input size: 28x28
+                        .nOut(hiddenLayerSize)                            //Size of the latent variable space: p(z|x). 2 dimensions here for plotting, use more in general
+                        .build())
+                .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
+                        .nIn(hiddenLayerSize)
                         .nOut(numOutputs)
-                        .activation(Activation.SIGMOID)
+                        .activation(Activation.SOFTMAX)
                         .build())
                 .setInputType(InputType.convolutionalFlat(rows,cols,channels)) //See note below
-                .backprop(true).pretrain(false).build();
+                .backprop(true).pretrain(true).build();
 
         //Configuration for Spark training: see http://deeplearning4j.org/spark for explanation of these configuration options
         TrainingMaster tm = new ParameterAveragingTrainingMaster.Builder(batch)    //Each DataSet object: contains (by default) 32 examples
-                .averagingFrequency(10)
-                .workerPrefetchNumBatches(1)            //Async prefetching: 2 examples per worker
+                .averagingFrequency(5)
+                .workerPrefetchNumBatches(-1)            //Async prefetching: 2 examples per worker
                 .batchSizePerWorker(batch)
                 .build();
 

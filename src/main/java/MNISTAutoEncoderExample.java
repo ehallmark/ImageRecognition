@@ -48,9 +48,8 @@ public class MNISTAutoEncoderExample {
         int channels = 1;
         int numInputs = rows*cols*channels;
         int nEpochs = 100;
-        int vectorSize = 150;
         int nLabels = 10;
-        int hiddenLayerSize = 100;
+        int hiddenLayerSize = 60;
 
         JavaRDD<DataSet> data = IngestMNIST.getTrainData(spark,batch,numInputs,nLabels);
         JavaRDD<DataSet> test = IngestMNIST.getTestData(spark,batch,numInputs,nLabels);
@@ -92,7 +91,7 @@ public class MNISTAutoEncoderExample {
                         .decoderLayerSizes(300,300)
                         .reconstructionDistribution(new BernoulliReconstructionDistribution(Activation.SIGMOID.getActivationFunction()))     //Bernoulli distribution for p(data|z) (binary or 0 to 1 data only)
                         .nIn(500)                       //Input size: 28x28
-                        .nOut(vectorSize)                            //Size of the latent variable space: p(z|x). 2 dimensions here for plotting, use more in general
+                        .nOut(hiddenLayerSize)                            //Size of the latent variable space: p(z|x). 2 dimensions here for plotting, use more in general
                         .build())
                 .layer(4, new OutputLayer.Builder()
                         .nIn(hiddenLayerSize)
