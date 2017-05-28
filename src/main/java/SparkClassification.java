@@ -91,7 +91,7 @@ public class SparkClassification {
             throw new RuntimeException("Unable to find data. Data is null");
         }
         int numOutputs = labels.size();
-        int hiddenLayerSize = 100;
+        int hiddenLayerSize = 50;
 
         //System.out.println("DataList size: "+data.count());
         System.out.println("Labels size: "+labels.size());
@@ -111,7 +111,7 @@ public class SparkClassification {
                         //nIn and nOut specify depth. nIn here is the nChannels and nOut is the number of filters to be applied
                         .nIn(channels)
                         .stride(3, 3)
-                        .nOut(50)
+                        .nOut(2*hiddenLayerSize)
                         .activation(Activation.RELU)
                         .build())
                 .layer(1, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
@@ -121,18 +121,18 @@ public class SparkClassification {
                 .layer(2, new ConvolutionLayer.Builder(4, 4)
                         //nIn and nOut specify depth. nIn here is the nChannels and nOut is the number of filters to be applied
                         .stride(2, 2)
-                        .nOut(40)
+                        .nOut(hiddenLayerSize)
                         .activation(Activation.RELU)
                         .build())
                 .layer(3, new SubsamplingLayer.Builder(SubsamplingLayer.PoolingType.MAX)
                         .kernelSize(3,3)
                         .stride(2,2)
                         .build())
-                .layer(2, new DenseLayer.Builder()
+                .layer(4, new DenseLayer.Builder()
                         .nOut(hiddenLayerSize*4)
                         .activation(Activation.RELU)
                         .build())
-                .layer(4, new VariationalAutoencoder.Builder()
+                .layer(5, new VariationalAutoencoder.Builder()
                         .activation(Activation.LEAKYRELU)
                         .pzxActivationFunction(Activation.IDENTITY)
                         //.dropOut(0.5)
@@ -142,7 +142,7 @@ public class SparkClassification {
                         .nIn(hiddenLayerSize*4)                       //Input size: 28x28
                         .nOut(hiddenLayerSize)                            //Size of the latent variable space: p(z|x). 2 dimensions here for plotting, use more in general
                         .build())
-                .layer(5, new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
+                .layer(6, new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
                         .nIn(hiddenLayerSize)
                         .nOut(numOutputs)
                         .activation(Activation.SOFTMAX)
