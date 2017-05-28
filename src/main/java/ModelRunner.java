@@ -66,9 +66,11 @@ public class ModelRunner {
                 = (org.deeplearning4j.nn.layers.variational.VariationalAutoencoder) model.getNetwork().getLayer(0);
 
         System.out.println("Train model....");
+        trainData.cache();
+        testData.cache();
+        double bestErrorSoFar = 2.0d;
         for( int i=0; i<nEpochs; i++ ) {
             model.fit(trainData);
-            double bestErrorSoFar = 2.0d;
             System.out.println("*** Completed epoch {"+i+"} ***");
             double overallError = testData.collect().stream().collect(Collectors.averagingDouble(test -> {
                 INDArray latentValues = autoencoder.activate(test.getFeatureMatrix(), false);
