@@ -99,7 +99,7 @@ public class DataLoader {
             System.out.println("Finished union: "+i);
         }
 
-        return null;//batchBy(data,batchSize,numInputs,numOutputs);
+        return batchBy(data,batchSize,numInputs,numOutputs);
     }
 
     public static JavaRDD<DataSet> batchBy(JavaRDD<DataSet> data, int batchSize, int numInputs, int numOutputs) {
