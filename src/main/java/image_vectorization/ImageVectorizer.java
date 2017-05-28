@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ImageVectorizer {
 
-    public static INDArray vectorizeImage(final BufferedImage image, int numInputs) {
+    public static INDArray vectorizeImage(final BufferedImage image, int numInputs, boolean blackAndWhite) {
         // Getting pixel color by position x and y
         int startX = 0;
         int startY = 0;
@@ -30,9 +30,14 @@ public class ImageVectorizer {
                 int  red   = color.getRed();
                 int  green = color.getGreen();
                 int  blue  =  color.getBlue();
-                for(int c : new int[]{red,green,blue}) {
-                    vec.putScalar(idx.getAndIncrement(),new Double(c)/255);
-                    if(idx.get()>=numInputs) return vec;
+                double black = new Double(red+green+blue)/255d;
+                if(blackAndWhite) {
+                    vec.putScalar(idx.getAndIncrement(),black);
+                } else {
+                    for (int c : new int[]{red, green, blue}) {
+                        vec.putScalar(idx.getAndIncrement(), new Double(c) / 255);
+                        if (idx.get() >= numInputs) return vec;
+                    }
                 }
             }
         }

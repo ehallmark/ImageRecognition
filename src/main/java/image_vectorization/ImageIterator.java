@@ -63,7 +63,7 @@ public class ImageIterator implements DataSetIterator{
                     URL url = new URL(urlString);
                     BufferedImage image = ImageStreamer.loadImage(url);
                     if(image==null)continue;
-                    INDArray f = ImageVectorizer.vectorizeImage(image,totalInputs);
+                    INDArray f = ImageVectorizer.vectorizeImage(image,totalInputs,true);
                     urlList.add(new Pair<>(idCounter.getAndIncrement(), f));
                     System.out.println(idCounter.get());
                 } catch (Exception e) {
@@ -163,7 +163,7 @@ public class ImageIterator implements DataSetIterator{
         int limit = 1000;
         int rows = 40;
         int cols = 40;
-        int channels = 3;
+        int channels = 1;
         int numInputs = rows*cols*channels;
         int nEpochs = 2000;
         // 1,4 billion!

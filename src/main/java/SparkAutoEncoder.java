@@ -65,7 +65,7 @@ public class SparkAutoEncoder {
         int batch = 5;
         int rows = 15;
         int cols = 15;
-        int channels = 3;
+        int channels = 1;
         int numInputs = rows*cols*channels;
         int nEpochs = 100;
 
@@ -102,7 +102,7 @@ public class SparkAutoEncoder {
         //Configuration for Spark training: see http://deeplearning4j.org/spark for explanation of these configuration options
         TrainingMaster tm = new ParameterAveragingTrainingMaster.Builder(batch)    //Each DataSet object: contains (by default) 32 examples
                 .averagingFrequency(5)
-                .workerPrefetchNumBatches(-1)            //Async prefetching: 2 examples per worker
+                .workerPrefetchNumBatches(1)            //Async prefetching: 2 examples per worker
                 .batchSizePerWorker(batch)
                 .build();
 

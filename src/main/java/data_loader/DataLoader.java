@@ -33,7 +33,7 @@ public class DataLoader {
     }
 
     public static JavaRDD<DataSet> loadClassificationData(SparkSession spark, int height, int width, int channels, List<String> labels, boolean classifyFolderNames, int batchSize, String... bucketNames) {
-        Map<String,Integer> invertedIdxMap = new HashMap<>();
+       /* Map<String,Integer> invertedIdxMap = new HashMap<>();
         for(int i = 0; i < labels.size(); i++) {
             invertedIdxMap.put(labels.get(i),i);
         }
@@ -93,9 +93,9 @@ public class DataLoader {
         for(int i = 1; i < dataList.size(); i++) {
             data=data.union(dataList.get(i));
             System.out.println("Finished union: "+i);
-        }
+        }*/
 
-        return batchBy(data,batchSize,numInputs,numOutputs);
+        return null;//batchBy(data,batchSize,numInputs,numOutputs);
     }
 
     public static JavaRDD<DataSet> batchBy(JavaRDD<DataSet> data, int batchSize, int numInputs, int numOutputs) {
@@ -138,9 +138,9 @@ public class DataLoader {
                         }
                         BufferedImage image = ImageIO.read(new ByteArrayInputStream((byte[]) (row.get(0))));
                         if(image.getHeight()!=height||image.getWidth()!=width) {
-                            image = Scalr.resize(image,Scalr.Method.ULTRA_QUALITY,height,width,Scalr.OP_ANTIALIAS);
+                            image = Scalr.resize(image,Scalr.Method.QUALITY,height,width,Scalr.OP_ANTIALIAS);
                         }
-                        vec = ImageVectorizer.vectorizeImage(image, numInputs);
+                        vec = ImageVectorizer.vectorizeImage(image, numInputs,channels==1?true:false);
                         if(vec!=null) {
                             return new DataSet(vec, vec);
                         }
